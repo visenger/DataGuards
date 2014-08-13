@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.tachyonproject:tachyon:0.4.1-thrift">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/tachyonproject/tachyon/0.4.1-thrift/tachyon-0.4.1-thrift.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/tachyonproject/tachyon/0.4.1-thrift/tachyon-0.4.1-thrift-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/tachyonproject/tachyon/0.4.1-thrift/tachyon-0.4.1-thrift-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
