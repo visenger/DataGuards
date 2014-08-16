@@ -12,8 +12,8 @@
         <java.verion>1.7</java.verion>
         <junit.version>4.11</junit.version>
         <guava.version>14.0.1</guava.version>
-        <scala.version>2.11.2</scala.version>
-        <scala.binary.version>2.11</scala.binary.version>
+        <scala.version>2.10.3</scala.version>
+        <scala.binary.version>2.10</scala.binary.version>
 
     </properties>
 
@@ -30,6 +30,12 @@
             <artifactId>spark-core_2.10</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.10</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
         <!--<dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
