@@ -1,16 +1,19 @@
 package de.data.preparation
 
+import com.typesafe.config.{Config, ConfigFactory}
+
 /**
  * Introduces noise to the provided data sets.
  */
 class NoiseInjector() {
 
-  import Seed._
   import DataSet._
 
-  var seedType = None: Option[Seed]
+  val config: Config = ConfigFactory.load()
+
   var dataset = None: Option[DataSet]
   var dataPath: String = ""
+  var resultPath = None: Option[String]
   var noiseP: Int = 2
 
 
@@ -32,22 +35,31 @@ class NoiseInjector() {
     this
   }
 
-  def attributes(attrs: String*): this.type = {
-    //
+
+  def writeTo(path: String): this.type = {
+    resultPath = Some(path)
     this
   }
 
-  def noiseSeed(seed: Seed): this.type = {
-    seedType = Some(seed)
-    this
-  }
+  def inject: Unit = {
 
-  def writeTo(path: String) = {
 
     dataset match {
-      case Some(TPCH) => TpchNoiseInjector.definedFor
-      case Some(HOSP) => HospNoiseInjector.definedFor
-      case _ => ???
+      case Some(TPCH) => {
+        val resultFolder = resultPath match {
+          case Some(x) => x
+          case None => config.getString("data.tpch.resultFolder")
+        }
+        new TpchNoiseInjector(dataPath, noiseP, resultFolder).inject
+      }
+      case Some(HOSP) => {
+        val resultFolder = resultPath match {
+          case Some(x) => x
+          case None => config.getString("data.hosp.resultFolder")
+        }
+        new HospNoiseInjector(dataPath, noiseP, resultFolder).inject
+      }
+      case None => println("data is not specified.")
     }
   }
 
@@ -58,38 +70,15 @@ object NoiseInjector {
   def definedFor = new NoiseInjector
 }
 
-
-object Seed extends Enumeration {
-  type Seed = Value
-  val NUM, TEXT = Value
-}
-
 object DataSet extends Enumeration {
   type DataSet = Value
   val HOSP, TPCH = Value
 }
 
 
-class HospNoiseInjector {
+object PlaygroundForNoise extends App {
 
-  //todo: perform the noise injection according to the introduced parameters;
-  //todo: write to file
-  //todo: write logs about noise: for evaluation
-
+  NoiseInjector.definedFor.hosp("path/to/hosp/data/2").noisePercentage(5).inject
 }
 
-object HospNoiseInjector {
-  def definedFor = new HospNoiseInjector
-}
 
-class TpchNoiseInjector {
-
-  //todo: perform the noise injection according to the introduced parameters;
-  //todo: write to file
-  //todo: write logs about noise: for evaluation
-
-}
-
-object TpchNoiseInjector {
-  def definedFor = new TpchNoiseInjector
-}
