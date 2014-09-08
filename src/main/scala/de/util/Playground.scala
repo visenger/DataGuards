@@ -45,4 +45,8 @@ object Playground {
 
 }
 
+object TestMe extends App{
+  (220986*16).toDouble * 5 /100
+}
+
 
