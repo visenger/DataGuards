@@ -36,13 +36,16 @@ class HospNoiseInjector(val datapath: String, val noisePersentage: Int = 2, val 
     tuples
   }
 
-  def calculateNoiseElements(tuples: Map[Long, HospTuple] /* may be here just map count*/) = {
-    val size: Int = tuples.size
-    val attrCount = 16
+  def calculateNoiseElements(size: Int): Int = {
+    val attrCount = config.getInt("data.hosp.attrCount")
     val totalElementsCount: Int = size * attrCount
-    val noisyElementsCount: Int = totalElementsCount * 100 /* % */ / noisePersentage
-
+    val noisyElementsCount: Int = totalElementsCount * noisePersentage / 100
+    noisyElementsCount
   }
+
+
+
+
 
   //todo: perform the noise injection according to the introduced parameters;
   //todo: write to file

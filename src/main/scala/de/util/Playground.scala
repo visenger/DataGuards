@@ -5,6 +5,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
 
+import scala.util.Random
+
 /**
  * Created by visenger on 13/08/14.
  */
@@ -45,8 +47,24 @@ object Playground {
 
 }
 
-object TestMe extends App{
-  (220986*16).toDouble * 5 /100
+object TestMe extends App {
+  val num = 220986 * 16 * 5 / 100
+
+  val count: Int = num * 3 / 4
+
+  val half = num / 2 /* 1 attr with noise */
+
+  val rest = count - half // 2 attr with noise
+
+  println(s" half = $half, rest= $rest")
+
+  val list = (2 to 16).toList
+
+
+  val randomList: List[Int] = Random.shuffle(list)
+  println("randomList = " + randomList)
+  val taken: List[Int] = randomList.take(3)
+  println("taken = " + taken)
 }
 
 
