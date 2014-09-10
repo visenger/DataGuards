@@ -64,7 +64,7 @@ object TestMe extends App {
   val attrs = (2 to 16).toList
   val tuples = (0 to 34).toList
 
-  val c = attrs cross tuples
+  val c = tuples cross attrs
 
   println("c.size = " + c.size)
 
