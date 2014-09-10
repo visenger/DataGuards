@@ -54,4 +54,5 @@ class HospNoiseInjector(val datapath: String, val noisePersentage: Int = 2, val 
 }
 
 
+
 case class HospTuple(providerID: String, hospitalName: String, address: String, city: String, state: String, zipCode: String, countyName: String, phoneNumber: String, condition: String, measureID: String, measureName: String, score: String, sample: String, footnote: String, measureStartDate: String, measureEndDate: String)

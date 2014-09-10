@@ -47,24 +47,31 @@ object Playground {
 
 }
 
+
 object TestMe extends App {
-  val num = 220986 * 16 * 5 / 100
 
-  val count: Int = num * 3 / 4
+  implicit class Crossable[T](xs: Traversable[T]) {
+    def cross[X](ys: Traversable[X]) = for {x <- xs; y <- ys} yield (x, y)
+  }
 
-  val half = num / 2 /* 1 attr with noise */
+  val noise = 5
 
-  val rest = count - half // 2 attr with noise
+  val num = /*220986*/ 35 * 16 * noise / 100
 
-  println(s" half = $half, rest= $rest")
-
-  val list = (2 to 16).toList
+  println(s" noise elements with $noise%  = " + num)
 
 
-  val randomList: List[Int] = Random.shuffle(list)
-  println("randomList = " + randomList)
-  val taken: List[Int] = randomList.take(3)
-  println("taken = " + taken)
+  val attrs = (2 to 16).toList
+  val tuples = (0 to 34).toList
+
+  val c = attrs cross tuples
+
+  println("c.size = " + c.size)
+
+  val noisy = Random.shuffle(c).take(num)
+  println("noisy = " + noisy)
+
+
 }
 
 
