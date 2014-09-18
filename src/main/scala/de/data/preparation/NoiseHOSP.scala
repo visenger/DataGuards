@@ -1,6 +1,7 @@
 package de.data.preparation
 
 import com.typesafe.config.ConfigFactory
+import de.util.Util
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
@@ -71,7 +72,16 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
     val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
     println("output.size = " + output.size)
+    val logNoise: List[String] = prepareList(noiseElements)
+    Util.writeToFile(logNoise, s"$writeTo/log-noise-$noisePercentage.tsv")
     //todo: persist noisy elements and noisy output into one folder according to the percentage
+  }
+
+  def prepareList(input: List[(Long, Int)]): List[String] = {
+    val output: List[String] = input.map(tuple => {
+      s"${tuple._1.toString}\t${tuple._2}"
+    })
+    output
   }
 
   private def insertNoiseInto(tuple: HospTuple, idx: List[(Long, Int)]): HospTuple = {
