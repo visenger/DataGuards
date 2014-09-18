@@ -77,8 +77,8 @@ object DataSet extends Enumeration {
 
 
 object PlaygroundForNoise extends App {
-
-  NoiseInjector.definedFor.hosp("path/to/hosp/data/2").noisePercentage(5).inject
+  private val config: Config = ConfigFactory.load()
+  NoiseInjector.definedFor.hosp(config.getString("data.hosp.path")).noisePercentage(5).writeTo(config.getString("data.hosp.resultFolder")).inject
 }
 
 
