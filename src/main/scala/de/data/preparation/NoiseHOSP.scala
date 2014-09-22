@@ -5,6 +5,7 @@ import de.util.Util
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
+import scala.collection.immutable.Iterable
 import scala.util.Random
 
 /**
@@ -60,7 +61,10 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val groupedByTupleIdx = noiseIdx.groupBy(_._1)
 
     val outputWithNoise: Map[Long, HospTuple] = input.map(i => {
-      if (groupedByTupleIdx.contains(i._1)) (i._1, insertNoiseInto(i._2, groupedByTupleIdx.getOrElse(i._1, List()))) else (i._1, i._2)
+      if (groupedByTupleIdx.contains(i._1)) {
+        println("yes");
+        (i._1, insertNoiseInto(i._2, groupedByTupleIdx.getOrElse(i._1, List())))
+      } else (i._1, i._2)
     })
     outputWithNoise
   }
@@ -72,16 +76,31 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
     val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
     println("output.size = " + output.size)
+
     val logNoise: List[String] = prepareList(noiseElements)
     Util.writeToFile(logNoise, s"$writeTo/log-noise-$noisePercentage.tsv")
-    //todo: persist noisy elements and noisy output into one folder according to the percentage
+
+    val data: List[String] = prepareData(output)
+    Util.writeToFile(data, s"$writeTo/data-noise-$noisePercentage.tsv")
+  }
+
+  def prepareData(output: Map[Long, HospTuple]): List[String] = {
+    val data: Iterable[String] = output.map(d => s"${d._1.toString}\t${d._2.asString}")
+    data.toList
   }
 
   def prepareList(input: List[(Long, Int)]): List[String] = {
-    val output: List[String] = input.map(tuple => {
-      s"${tuple._1.toString}\t${tuple._2}"
+
+    val grouped: Map[Long, List[(Long, Int)]] = input.groupBy(_._1)
+    val normalized: Map[Long, List[Int]] = grouped.map(e => {
+      val attrs: List[Int] = e._2.map(_._2)
+      (e._1, attrs)
     })
-    output
+
+    val output: Iterable[String] = normalized.map(tuple => {
+      s"""${tuple._1.toString}\t${tuple._2.mkString("\t")}"""
+    })
+    output.toList
   }
 
   private def insertNoiseInto(tuple: HospTuple, idx: List[(Long, Int)]): HospTuple = {
@@ -111,25 +130,94 @@ case class HospTuple(providerID: String,
                      var measureStartDate: String,
                      var measureEndDate: String) {
 
+
+  //setters
+
+  def makeNoisyhospitalName(str: String) {
+    this.hospitalName = hospitalName + str
+  }
+
+  def makeNoisyaddress(str: String) {
+    this.address = this.address + str
+  }
+
+  def makeNoisycity(str: String) {
+    this.city = this.city + str
+  }
+
+  def makeNoisystate(str: String) {
+    this.state = this.state + str
+  }
+
+  def makeNoisyzipCode(str: String) {
+    this.zipCode = this.zipCode + str
+  }
+
+  def makeNoisycountyName(str: String) {
+    this.countyName = this.countyName + str
+  }
+
+  def makeNoisyphoneNumber(str: String) {
+    this.phoneNumber = this.phoneNumber + str
+  }
+
+  def makeNoisycondition(str: String) {
+    this.condition = this.condition + str
+  }
+
+  def makeNoisymeasureID(str: String) {
+    this.measureID = this.measureID + str
+  }
+
+  def makeNoisymeasureName(str: String) {
+    this.measureName = this.measureName + str
+  }
+
+  def makeNoisyscore(str: String) {
+    this.score = this.score + str
+  }
+
+  def makeNoisysample(str: String) {
+    this.sample = this.sample + str
+  }
+
+  def makeNoisyfootnote(str: String) {
+    this.footnote = this.footnote + str
+  }
+
+  def makeNoisymeasureStartDate(str: String) {
+    this.measureStartDate = this.measureStartDate + str
+  }
+
+  def makeNoisymeasureEndDate(str: String) {
+    this.measureEndDate = this.measureEndDate + str
+  }
+
+
+  def asString: String = {
+
+    s"""${this.providerID}\t$hospitalName\t$address\t$city\t$state\t$zipCode\t$countyName\t$phoneNumber\t$condition\t$measureID\t$measureName\t$score\t$sample\t$footnote\t$measureStartDate\t$measureEndDate"""
+  }
+
   def insertNoise(attrs: List[Int]): this.type = {
     val noise = "typo"
     attrs foreach (i => i match {
 
-      case 2 => this.hospitalName + noise
-      case 3 => this.address + noise
-      case 4 => this.city + noise
-      case 5 => this.state + noise
-      case 6 => this.zipCode + noise
-      case 7 => this.countyName + noise
-      case 8 => this.phoneNumber + noise
-      case 9 => this.condition + noise
-      case 10 => this.measureID + noise
-      case 11 => this.measureName + noise
-      case 12 => this.score + noise
-      case 13 => this.sample + noise
-      case 14 => this.footnote + noise
-      case 15 => this.measureStartDate + noise
-      case 16 => this.measureEndDate + noise
+      case 2 => makeNoisyhospitalName(noise)
+      case 3 => makeNoisyaddress(noise)
+      case 4 => makeNoisycity(noise)
+      case 5 => makeNoisystate(noise)
+      case 6 => makeNoisyzipCode(noise)
+      case 7 => makeNoisycountyName(noise)
+      case 8 => makeNoisyphoneNumber(noise)
+      case 9 => makeNoisycondition(noise)
+      case 10 => makeNoisymeasureID(noise)
+      case 11 => makeNoisymeasureName(noise)
+      case 12 => makeNoisyscore(noise)
+      case 13 => makeNoisysample(noise)
+      case 14 => makeNoisyfootnote(noise)
+      case 15 => makeNoisymeasureStartDate(noise)
+      case 16 => makeNoisymeasureEndDate(noise)
     })
     this
   }
