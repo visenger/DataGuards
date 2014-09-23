@@ -62,7 +62,6 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
 
     val outputWithNoise: Map[Long, HospTuple] = input.map(i => {
       if (groupedByTupleIdx.contains(i._1)) {
-        println("yes");
         (i._1, insertNoiseInto(i._2, groupedByTupleIdx.getOrElse(i._1, List())))
       } else (i._1, i._2)
     })
