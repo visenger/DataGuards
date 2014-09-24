@@ -129,6 +129,8 @@ case class HospTuple(providerID: String,
                      var measureStartDate: String,
                      var measureEndDate: String) {
 
+  //todo: create Markov Logic predicates for each hosp tuple (pass tuple id)
+
 
   //setters
 

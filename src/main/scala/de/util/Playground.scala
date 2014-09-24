@@ -22,6 +22,9 @@ case class JointCustOrder(custKey: String, name: String, addr: String, natKey: S
 object Playground {
 
   def main(args: Array[String]) {
+    implicit class Crossable[T](xs: Traversable[T]) {
+      def cross[X](ys: Traversable[X]) = for {x <- xs; y <- ys} yield (x, y)
+    }
 
     val config: Config = ConfigFactory.load()
 
@@ -69,10 +72,13 @@ object Playground {
       JointCustOrder(s"${m(0)}", s"${m(1)}", s"${m(2)}", s"${m(3)}", s"${m(4)}", s"${m(5)}", s"${m(6)}", s"${m(7)}", s"${m(8)}", s"${m(9)}", s"${m(10)}", s"${m(11)}", s"${m(12)}"))
 
 
-    println("jointTables = " + jointTables.count())
+    println("jointTables count = " + jointCustOrder.count())
 
     //jointTables.take(25).map(m => s"cust key: ${m(0)} cust name: ${m(1)} order key: ${m(2)}").foreach(println)
-    jointTables.take(25).map(m => s"customer: ${m(0)} name: ${m(1)} bought item: ${m(8)} for total price: ${m(11)}").foreach(println)
+    jointCustOrder.take(25).map(m => s"customer: ${m.custKey} name: ${m.name} bought item: ${m.orderKey} for total price: ${m.totalPrice}").foreach(println)
+
+    val indexedTabs: RDD[(JointCustOrder, Long)] = jointCustOrder.zipWithUniqueId()
+    indexedTabs.saveAsTextFile(config.getString("data.tpch.resultFolder"))
 
     //    import sqlContext._
     //    val anotherAuto = customers.where('mrkt === "AUTOMOBILE").select('name)
