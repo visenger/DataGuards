@@ -1,15 +1,18 @@
 package de.data.preparation
 
 import com.typesafe.config.{ConfigFactory, Config}
+import de.util.Util
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
+import scala.collection.immutable.Iterable
 import scala.util.Random
 
 /**
  * Processing TPCH data set. This class introduces noise to TPCH. Result is written to the specified folder.
  */
-/*The reason for extending Serializable http://stackoverflow.com/questions/22592811/scala-spark-task-not-serializable-java-io-notserializableexceptionon-when*/
+/*The reason for extending the class with Serializable
+http://stackoverflow.com/questions/22592811/scala-spark-task-not-serializable-java-io-notserializableexceptionon-when*/
 
 class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val writeTo: String) extends java.io.Serializable {
 
@@ -82,11 +85,20 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
         (t._1, insertNoiseInto(t._2, compactView.getOrElse(t._1, List())))
       else (t._1, t._2)
     })
+
     //todo: persist compactView for noise logging
+
+
     //todo: create markov logic predicates and persist them as well as data
     println("dirtyData = " + dirtyData.count())
 
     sc.stop()
+
+    val logData: Iterable[String] = compactView.map(t => {
+      s"""${t._1.toString}\t${t._2.mkString("\t")}"""
+    })
+
+    Util.writeToFile(logData.toList, s"$writeTo/log-noise-$noisePercentage.tsv")
 
   }
 
