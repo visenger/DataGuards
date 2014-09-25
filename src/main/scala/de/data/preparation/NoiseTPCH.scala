@@ -82,7 +82,8 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
         (t._1, insertNoiseInto(t._2, compactView.getOrElse(t._1, List())))
       else (t._1, t._2)
     })
-
+    //todo: persist compactView for noise logging
+    //todo: create markov logic predicates and persist them as well as data
     println("dirtyData = " + dirtyData.count())
 
     sc.stop()
@@ -179,6 +180,24 @@ case class JointCustOrder(var custKey: String,
       case _ =>
     })
     this
+  }
+
+  val createPredicates: (Long) => String = (idx) => {
+    s"""
+       |custKey("$idx", "${this.custKey}")
+       |name("$idx", "${this.name}")
+       |addr("$idx", "${this.addr}")
+       |natKey("$idx", "${this.natKey}")
+       |phone("$idx", "${this.phone}")
+       |acc("$idx", "${this.acc}")
+       |mrkt("$idx", "${this.mrkt}")
+       |orderKey("$idx", "${this.orderKey}")
+       |orderStatus("$idx", "${this.orderStatus}")
+       |totalPrice("$idx", "${this.totalPrice}")
+       |orderDate("$idx", "${this.orderDate}")
+       |orderPriority("$idx", "${this.orderPriority}")
+       |clerk("$idx", "${this.clerk}")
+     """.stripMargin
   }
 
   //todo: create Markov Logic predicates for each hosp tuple (pass tuple id) -> output: String

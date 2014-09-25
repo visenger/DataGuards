@@ -79,6 +79,7 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val logNoise: List[String] = prepareList(noiseElements)
     Util.writeToFile(logNoise, s"$writeTo/log-noise-$noisePercentage.tsv")
 
+    //todo: create markov logic predicates and persist them as well as data
     val data: List[String] = prepareData(output)
     Util.writeToFile(data, s"$writeTo/data-noise-$noisePercentage.tsv")
   }
@@ -221,5 +222,26 @@ case class HospTuple(providerID: String,
       case 16 => makeNoisymeasureEndDate(noise)
     })
     this
+  }
+
+  val createPredicates: (Long) => String = (idx) => {
+    s"""
+       |providerID("$idx", "${this.providerID}")
+       |hospitalName("$idx", "${this.hospitalName}")
+       |address("$idx", "${this.address}")
+       |city("$idx", "${this.city}")
+       |state("$idx", "${this.state}")
+       |zipCode("$idx", "${this.zipCode}")
+       |countyName("$idx", "${this.countyName}")
+       |phoneNumber("$idx", "${this.phoneNumber}")
+       |condition("$idx", "${this.condition}")
+       |measureID("$idx", "${this.measureID}")
+       |measureName("$idx", "${this.measureName}")
+       |score("$idx", "${this.score}")
+       |sample("$idx", "${this.sample}")
+       |footnote("$idx", "${this.footnote}")
+       |measureStartDate("$idx", "${this.measureStartDate}")
+       |measureEndDate("$idx", "${this.measureEndDate}")
+     """.stripMargin
   }
 }
