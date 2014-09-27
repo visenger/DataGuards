@@ -84,9 +84,14 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     Util.writeToFile(data, s"$writeTo/data-noise-$noisePercentage.tsv")
   }
 
-  def prepareData(output: Map[Long, HospTuple]): List[String] = {
-    val data: Iterable[String] = output.map(d => s"${d._1.toString}\t${d._2.asString}")
-    data.toList
+  def prepareData(input: Map[Long, HospTuple]): List[String] = {
+    //    val data: Iterable[String] = input.map(d => s"${d._1.toString}\t${d._2.asString}")
+    //    data.toList
+
+    val predicates: Iterable[String] = input.map(t => {
+      t._2.createPredicates(t._1)
+    })
+    predicates.toList
   }
 
   def prepareList(input: List[(Long, Int)]): List[String] = {

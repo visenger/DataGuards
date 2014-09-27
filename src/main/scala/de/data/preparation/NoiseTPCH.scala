@@ -86,11 +86,12 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       else (t._1, t._2)
     })
 
-    //todo: persist compactView for noise logging
+    val markovLogicPredicates: RDD[String] = dirtyData.map(t => {
+      t._2.createPredicates(t._1)
+    })
 
 
-    //todo: create markov logic predicates and persist them as well as data
-    println("dirtyData = " + dirtyData.count())
+    markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/joint")
 
     sc.stop()
 
