@@ -69,19 +69,16 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
   }
 
   def inject = {
-    println(s"input = $datapath; noise = $noisePercentage; result folder= $writeTo")
 
     val input: Map[Long, HospTuple] = readData
     val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
     val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
-    println("output.size = " + output.size)
 
     val logNoise: List[String] = prepareList(noiseElements)
-    Util.writeToFile(logNoise, s"$writeTo/log-noise-$noisePercentage.tsv")
+    Util.writeToFile(logNoise, s"$writeTo/$noisePercentage/log-noise-$noisePercentage.tsv")
 
-    //todo: create markov logic predicates and persist them as well as data
     val data: List[String] = prepareData(output)
-    Util.writeToFile(data, s"$writeTo/data-noise-$noisePercentage.tsv")
+    Util.writeToFile(data, s"$writeTo/$noisePercentage/data-noise-$noisePercentage.tsv")
   }
 
   def prepareData(input: Map[Long, HospTuple]): List[String] = {
@@ -135,7 +132,6 @@ case class HospTuple(providerID: String,
                      var measureStartDate: String,
                      var measureEndDate: String) {
 
-  //todo: create Markov Logic predicates for each hosp tuple (pass tuple id)
 
 
   //setters
@@ -230,23 +226,24 @@ case class HospTuple(providerID: String,
   }
 
   val createPredicates: (Long) => String = (idx) => {
+    import Util._
     s"""
-       |providerID("$idx", "${this.providerID}")
-       |hospitalName("$idx", "${this.hospitalName}")
-       |address("$idx", "${this.address}")
-       |city("$idx", "${this.city}")
-       |state("$idx", "${this.state}")
-       |zipCode("$idx", "${this.zipCode}")
-       |countyName("$idx", "${this.countyName}")
-       |phoneNumber("$idx", "${this.phoneNumber}")
-       |condition("$idx", "${this.condition}")
-       |measureID("$idx", "${this.measureID}")
-       |measureName("$idx", "${this.measureName}")
-       |score("$idx", "${this.score}")
-       |sample("$idx", "${this.sample}")
-       |footnote("$idx", "${this.footnote}")
-       |measureStartDate("$idx", "${this.measureStartDate}")
-       |measureEndDate("$idx", "${this.measureEndDate}")
+       |providerID("$idx", "${normalizeGroundAtom(this.providerID)}")
+       |hospitalName("$idx", "${normalizeGroundAtom(this.hospitalName)}")
+       |address("$idx", "${normalizeGroundAtom(this.address)}")
+       |city("$idx", "${normalizeGroundAtom(this.city)}")
+       |state("$idx", "${normalizeGroundAtom(this.state)}")
+       |zipCode("$idx", "${normalizeGroundAtom(this.zipCode)}")
+       |countyName("$idx", "${normalizeGroundAtom(this.countyName)}")
+       |phoneNumber("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
+       |condition("$idx", "${normalizeGroundAtom(this.condition)}")
+       |measureID("$idx", "${normalizeGroundAtom(this.measureID)}")
+       |measureName("$idx", "${normalizeGroundAtom(this.measureName)}")
+       |score("$idx", "${normalizeGroundAtom(this.score)}")
+       |sample("$idx", "${normalizeGroundAtom(this.sample)}")
+       |footnote("$idx", "${normalizeGroundAtom(this.footnote)}")
+       |measureStartDate("$idx", "${normalizeGroundAtom(this.measureStartDate)}")
+       |measureEndDate("$idx", "${normalizeGroundAtom(this.measureEndDate)}")
      """.stripMargin
   }
 }

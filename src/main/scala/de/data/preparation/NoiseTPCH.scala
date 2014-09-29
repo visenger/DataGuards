@@ -91,7 +91,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     })
 
 
-    markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/joint")
+    markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/$noisePercentage")
 
     sc.stop()
 
@@ -99,7 +99,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       s"""${t._1.toString}\t${t._2.mkString("\t")}"""
     })
 
-    Util.writeToFile(logData.toList, s"$writeTo/log-noise-$noisePercentage.tsv")
+    Util.writeToFile(logData.toList, s"$writeTo/$noisePercentage/log-noise-$noisePercentage.tsv")
 
   }
 
@@ -196,23 +196,23 @@ case class JointCustOrder(var custKey: String,
   }
 
   val createPredicates: (Long) => String = (idx) => {
+    import Util._
     s"""
-       |custKey("$idx", "${this.custKey}")
-       |name("$idx", "${this.name}")
-       |addr("$idx", "${this.addr}")
-       |natKey("$idx", "${this.natKey}")
-       |phone("$idx", "${this.phone}")
-       |acc("$idx", "${this.acc}")
-       |mrkt("$idx", "${this.mrkt}")
-       |orderKey("$idx", "${this.orderKey}")
-       |orderStatus("$idx", "${this.orderStatus}")
-       |totalPrice("$idx", "${this.totalPrice}")
-       |orderDate("$idx", "${this.orderDate}")
-       |orderPriority("$idx", "${this.orderPriority}")
-       |clerk("$idx", "${this.clerk}")
+       |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
+       |name("$idx", "${normalizeGroundAtom(this.name)}")
+       |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+       |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+       |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+       |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+       |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+       |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+       |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
+       |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
+       |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
+       |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
+       |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
      """.stripMargin
   }
 
-  //todo: create Markov Logic predicates for each hosp tuple (pass tuple id) -> output: String
 }
 
