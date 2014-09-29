@@ -6,6 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.collection.immutable.Iterable
+import scala.io.Source
 import scala.util.Random
 
 /**
@@ -75,20 +76,18 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
 
     val logNoise: List[String] = prepareList(noiseElements)
-    Util.writeToFile(logNoise, s"$writeTo/$noisePercentage/log-noise-$noisePercentage.tsv")
+    Util.writeToFile(logNoise, s"$writeTo/$noisePercentage/log-noise-$noisePercentage.db")
 
     val data: List[String] = prepareData(output)
     Util.writeToFile(data, s"$writeTo/$noisePercentage/data-noise-$noisePercentage.tsv")
   }
 
   def prepareData(input: Map[Long, HospTuple]): List[String] = {
-    //    val data: Iterable[String] = input.map(d => s"${d._1.toString}\t${d._2.asString}")
-    //    data.toList
 
     val predicates: Iterable[String] = input.map(t => {
       t._2.createPredicates(t._1)
     })
-    predicates.toList
+    predicates.toList ::: predicatesZipTSV
   }
 
   def prepareList(input: List[(Long, Int)]): List[String] = {
@@ -103,6 +102,23 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       s"""${tuple._1.toString}\t${tuple._2.mkString("\t")}"""
     })
     output.toList
+  }
+
+  def predicatesZipTSV: List[String] = {
+    val zipFile = s"${config.getString("data.hosp.zip")}/zipcode.csv"
+    val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
+
+    val zipPredicates = zipLines map (l => {
+      val line = l._1
+      val idx = l._2
+      val Array(zip, state) = line.split(",")
+      val predicates =
+        s"""zipZ(\"$idx\", \"$zip\")
+         |stateZ(\"$idx\", \"$state\")
+       """.stripMargin
+      predicates
+    })
+    zipPredicates.toList
   }
 
   private def insertNoiseInto(tuple: HospTuple, idx: List[(Long, Int)]): HospTuple = {
@@ -131,7 +147,6 @@ case class HospTuple(providerID: String,
                      var footnote: String,
                      var measureStartDate: String,
                      var measureEndDate: String) {
-
 
 
   //setters
@@ -234,7 +249,7 @@ case class HospTuple(providerID: String,
        |city("$idx", "${normalizeGroundAtom(this.city)}")
        |state("$idx", "${normalizeGroundAtom(this.state)}")
        |zipCode("$idx", "${normalizeGroundAtom(this.zipCode)}")
-       |countyName("$idx", "${normalizeGroundAtom(this.countyName)}")
+       |countryName("$idx", "${normalizeGroundAtom(this.countyName)}")
        |phoneNumber("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
        |condition("$idx", "${normalizeGroundAtom(this.condition)}")
        |measureID("$idx", "${normalizeGroundAtom(this.measureID)}")
