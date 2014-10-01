@@ -1,5 +1,7 @@
 package de.data.preparation
 
+import java.io.File
+
 import com.typesafe.config.ConfigFactory
 import de.util.Util
 import org.apache.spark.rdd.RDD
@@ -23,13 +25,14 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
   val config = ConfigFactory.load()
 
 
-  def readData: Map[Long, HospTuple] = {
+  def readData(path: String): Map[Long, HospTuple] = {
     val sparkConf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("HOSP")
     val sc: SparkContext = new SparkContext(sparkConf)
 
-    val header: String = sc.textFile(datapath).first()
+    //val header: String = sc.textFile(datapath).first()
 
-    val filteredHeader: RDD[String] = sc.textFile(datapath).filter(!_.equals(header))
+    val filteredHeader: RDD[String] = sc.textFile(path)
+    //    val filteredHeader: RDD[String] = sc.parallelize(sc.textFile(datapath).filter(!_.equals(header)).take(200))
     val tupled: RDD[HospTuple] = filteredHeader.map(line => {
       val Array(providerID, hospitalName, address, city, state, zipCode, countyName, phoneNumber, condition, measureID, measureName, score, sample, footnote, measureStartDate, measureEndDate) = line.split( s"""","""")
       HospTuple(providerID.toString.replace('"', ' ').trim, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
@@ -71,15 +74,22 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
 
   def inject = {
 
-    val input: Map[Long, HospTuple] = readData
-    val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
-    val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
+    val dir: File = new File(datapath)
 
-    val logNoise: List[String] = prepareList(noiseElements)
-    Util.writeToFile(logNoise, s"$writeTo/$noisePercentage/log-noise-$noisePercentage.db")
 
-    val data: List[String] = prepareData(output)
-    Util.writeToFile(data, s"$writeTo/$noisePercentage/data-noise-$noisePercentage.tsv")
+    for {file <- dir.listFiles() if file.getName.startsWith("hosp")} {
+      val input: Map[Long, HospTuple] = readData(file.getAbsolutePath)
+      val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
+      val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
+
+
+      val fileName = file.getName.takeWhile(_ != '.')
+      val logNoise: List[String] = prepareList(noiseElements)
+      Util.writeToFile(logNoise, s"$writeTo/$noisePercentage/log-noise-$fileName-$noisePercentage.tsv")
+
+      val data: List[String] = prepareData(output)
+      Util.writeToFile(data, s"$writeTo/$noisePercentage/data-noise-$fileName-$noisePercentage.db")
+    }
   }
 
   def prepareData(input: Map[Long, HospTuple]): List[String] = {

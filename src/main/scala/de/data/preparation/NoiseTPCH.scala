@@ -65,6 +65,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     * 12 o.clerk
     * */
 
+
     val jointCustOrder: RDD[JointCustOrder] = jointTables.map(m =>
       JointCustOrder(s"${m(0)}", s"${m(1)}", s"${m(2)}", s"${m(3)}", s"${m(4)}", s"${m(5)}", s"${m(6)}", s"${m(7)}", s"${m(8)}", s"${m(9)}", s"${m(10)}", s"${m(11)}", s"${m(12)}"))
 
@@ -197,6 +198,22 @@ case class JointCustOrder(var custKey: String,
 
   val createPredicates: (Long) => String = (idx) => {
     import Util._
+//    s"""
+//       |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
+//       |name("$idx", "${normalizeGroundAtom(this.name)}")
+//       |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+//       |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+//       |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+//       |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+//       |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+//       |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+//       |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
+//       |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
+//       |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
+//       |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
+//       |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
+//     """.stripMargin
+
     s"""
        |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
        |name("$idx", "${normalizeGroundAtom(this.name)}")
@@ -206,11 +223,6 @@ case class JointCustOrder(var custKey: String,
        |acc("$idx", "${normalizeGroundAtom(this.acc)}")
        |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
        |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
-       |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
-       |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
-       |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
-       |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
-       |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
      """.stripMargin
   }
 

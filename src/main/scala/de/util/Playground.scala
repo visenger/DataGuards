@@ -125,4 +125,12 @@ object TestMe extends App {
 
 }
 
+object TestSubstring extends App {
+  val str= "hosp.tsv"
+
+  val substr: String = str.takeWhile(_ != '.')
+
+  println("substr = " + substr)
+}
+
 
