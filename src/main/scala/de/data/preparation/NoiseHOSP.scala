@@ -253,22 +253,18 @@ case class HospTuple(providerID: String,
   val createPredicates: (Long) => String = (idx) => {
     import Util._
     s"""
-       |providerID("$idx", "${normalizeGroundAtom(this.providerID)}")
-       |hospitalName("$idx", "${normalizeGroundAtom(this.hospitalName)}")
-       |address("$idx", "${normalizeGroundAtom(this.address)}")
-       |city("$idx", "${normalizeGroundAtom(this.city)}")
-       |state("$idx", "${normalizeGroundAtom(this.state)}")
-       |zipCode("$idx", "${normalizeGroundAtom(this.zipCode)}")
-       |countryName("$idx", "${normalizeGroundAtom(this.countyName)}")
-       |phoneNumber("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
-       |condition("$idx", "${normalizeGroundAtom(this.condition)}")
-       |measureID("$idx", "${normalizeGroundAtom(this.measureID)}")
-       |measureName("$idx", "${normalizeGroundAtom(this.measureName)}")
-       |score("$idx", "${normalizeGroundAtom(this.score)}")
-       |sample("$idx", "${normalizeGroundAtom(this.sample)}")
-       |footnote("$idx", "${normalizeGroundAtom(this.footnote)}")
-       |measureStartDate("$idx", "${normalizeGroundAtom(this.measureStartDate)}")
-       |measureEndDate("$idx", "${normalizeGroundAtom(this.measureEndDate)}")
+       |providerNumberH("$idx", "${normalizeGroundAtom(this.providerID)}")
+       |hospitalNameH("$idx", "${normalizeGroundAtom(this.hospitalName)}")
+       |addressH("$idx", "${normalizeGroundAtom(this.address)}")
+       |cityH("$idx", "${normalizeGroundAtom(this.city)}")
+       |stateH("$idx", "${normalizeGroundAtom(this.state)}")
+       |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
+       |countryNameH("$idx", "${normalizeGroundAtom(this.countyName)}")
+       |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
+       |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
+       |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
+       |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
+       |scoreH("$idx", "${normalizeGroundAtom(this.score)}")
      """.stripMargin
   }
 }

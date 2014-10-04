@@ -49,6 +49,9 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
       "FROM customers c, orders o " +
       "WHERE c.custKey=o.custKey")
+
+    //todo: split jointTables into smaller parts, which will be suitable for Rockit inference.
+
     /*
     * 0 c.custKey,
     * 1 c.name,
@@ -91,7 +94,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       t._2.createPredicates(t._1)
     })
 
-
+    //todo: folder namings
     markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/$noisePercentage")
 
     sc.stop()
@@ -198,21 +201,21 @@ case class JointCustOrder(var custKey: String,
 
   val createPredicates: (Long) => String = (idx) => {
     import Util._
-//    s"""
-//       |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
-//       |name("$idx", "${normalizeGroundAtom(this.name)}")
-//       |addr("$idx", "${normalizeGroundAtom(this.addr)}")
-//       |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
-//       |phone("$idx", "${normalizeGroundAtom(this.phone)}")
-//       |acc("$idx", "${normalizeGroundAtom(this.acc)}")
-//       |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
-//       |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
-//       |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
-//       |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
-//       |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
-//       |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
-//       |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
-//     """.stripMargin
+    //    s"""
+    //       |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
+    //       |name("$idx", "${normalizeGroundAtom(this.name)}")
+    //       |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+    //       |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+    //       |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+    //       |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+    //       |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+    //       |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+    //       |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
+    //       |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
+    //       |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
+    //       |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
+    //       |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
+    //     """.stripMargin
 
     s"""
        |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")

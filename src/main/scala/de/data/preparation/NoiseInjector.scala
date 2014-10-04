@@ -78,8 +78,11 @@ object DataSet extends Enumeration {
 
 object PlaygroundForNoise extends App {
   private val config: Config = ConfigFactory.load()
-  NoiseInjector.definedFor.hosp(config.getString("data.hosp.path")).noisePercentage(2).writeTo(config.getString("data.hosp.resultFolder")).inject
-  //    NoiseInjector.definedFor.tpch(config.getString("data.tpch.path")).noisePercentage(2).inject
+
+  for {i <- 4 to 10 if i % 2 == 0} {
+    NoiseInjector.definedFor.hosp(config.getString("data.hosp.path")).noisePercentage(i).writeTo(config.getString("data.hosp.resultFolder")).inject
+    //    NoiseInjector.definedFor.tpch(config.getString("data.tpch.path")).noisePercentage(2).inject
+  }
 }
 
 
