@@ -3,6 +3,7 @@ package de.data.preparation
 import com.typesafe.config.{ConfigFactory, Config}
 import de.util.Util
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
 import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.collection.immutable.Iterable
@@ -52,6 +53,9 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
 
     //todo: split jointTables into smaller parts, which will be suitable for Rockit inference.
 
+
+    val tablePart: RDD[Row] = sc.parallelize(jointTables.take(100000))
+
     /*
     * 0 c.custKey,
     * 1 c.name,
@@ -69,7 +73,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     * */
 
 
-    val jointCustOrder: RDD[JointCustOrder] = jointTables.map(m =>
+    val jointCustOrder: RDD[JointCustOrder] = tablePart.map(m =>
       JointCustOrder(s"${m(0)}", s"${m(1)}", s"${m(2)}", s"${m(3)}", s"${m(4)}", s"${m(5)}", s"${m(6)}", s"${m(7)}", s"${m(8)}", s"${m(9)}", s"${m(10)}", s"${m(11)}", s"${m(12)}"))
 
     val indexedTabs: RDD[(Long, JointCustOrder)] = jointCustOrder.zipWithUniqueId().map(e => e.swap)
