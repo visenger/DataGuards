@@ -8,7 +8,7 @@ import org.apache.spark.{SparkContext, SparkConf}
  * Created by visenger on 17/08/14.
  */
 
-case class HospTuple(providerID: String, hospitalName: String, address: String, city: String, state: String, zipCode: String, countyName: String, phoneNumber: String, condition: String, measureID: String, measureName: String, score: String, sample: String, footnote: String, measureStartDate: String, measureEndDate: String)
+case class Hosp(providerID: String, hospitalName: String, address: String, city: String, state: String, zipCode: String, countyName: String, phoneNumber: String, condition: String, measureID: String, measureName: String, score: String, sample: String, footnote: String, measureStartDate: String, measureEndDate: String)
 
 object HospNoiseCreator extends App {
 
@@ -23,7 +23,7 @@ object HospNoiseCreator extends App {
   val allTuples /*: RDD[HospTuple]*/ = sc.textFile(path).filter(!_.equals(firstLine)).map(line => {
 
     val Array(providerID, hospitalName, address, city, state, zipCode, countyName, phoneNumber, condition, measureID, measureName, score, sample, footnote, measureStartDate, measureEndDate) = line.split( s"""","""")
-    HospTuple(providerID.toString, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
+    Hosp(providerID.toString, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
 
   })
 

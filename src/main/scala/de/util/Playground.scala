@@ -126,11 +126,31 @@ object TestMe extends App {
 }
 
 object TestSubstring extends App {
-  val str= "hosp.tsv"
+  val str = "hosp.tsv"
 
   val substr: String = str.takeWhile(_ != '.')
 
   println("substr = " + substr)
+}
+
+object TestConverter extends App {
+  val str = "9231\t9"
+  val list: List[String] = str.split("\\t").toList
+
+  val a: Long = convertToLong(list.head)
+  println("a = " + a)
+
+  val t: List[Int] = convertToInt(list.tail)
+  println("t = " + t)
+
+
+  def convertToLong(s: String): Long = {
+    s.trim.toLong
+  }
+
+  def convertToInt(l: List[String]): List[Int] = {
+    l.map(_.trim.toInt)
+  }
 }
 
 

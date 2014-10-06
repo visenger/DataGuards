@@ -268,3 +268,77 @@ case class HospTuple(providerID: String,
      """.stripMargin
   }
 }
+
+object HospTuple {
+  def getAttrNameByIdx(idx: Int): String = {
+
+    idx match {
+      case 2 => "providerNumberH"
+      case 3 => "hospitalNameH"
+      case 4 => "addressH"
+      case 5 => "cityH"
+      case 6 => "stateH"
+      case 7 => "zipCodeH"
+      case 8 => "countryNameH"
+      case 9 => "phoneNumberH"
+      case 10 => "conditionH"
+      case 11 => "measureCodeH"
+      case 12 => "measureNameH"
+      case 13 => "scoreH"
+      case 14 => ""
+      case 15 => ""
+      case 16 => ""
+      case _ => ""
+    }
+
+  }
+
+  /*
+  eqHospitalNameH(hid, name, hid, name)
+  eqAddressH(hid, address, hid, address)
+  eqCityH(hid, city, hid, city)
+  eqStateH(hid, state, hid, state)
+  eqZipCodeH(hid, code, hid, code)
+  eqCountryNameH(hid, country, hid, country)
+  eqPhoneNumberH(hid, number, hid, number)
+  eqMeasureNameH(hid, measurename, hid, measurename)
+  eqConditionH(hid, condition, hid, condition)
+
+      case 2 => makeNoisyhospitalName(noise)
+      case 3 => makeNoisyaddress(noise)
+      case 4 => makeNoisycity(noise)
+      case 5 => makeNoisystate(noise)
+      case 6 => makeNoisyzipCode(noise)
+      case 7 => makeNoisycountyName(noise)
+      case 8 => makeNoisyphoneNumber(noise)
+      case 9 => makeNoisycondition(noise)
+      case 10 => makeNoisymeasureID(noise)
+      case 11 => makeNoisymeasureName(noise)
+      case 12 => makeNoisyscore(noise)
+      case 13 => makeNoisysample(noise)
+      case 14 => makeNoisyfootnote(noise)
+      case 15 => makeNoisymeasureStartDate(noise)
+      case 16 => makeNoisymeasureEndDate(noise)
+
+
+  */
+
+  def getIdxByAttrName(name: String): Int = {
+    //todo: hack! these are hidden predicates names
+    name match {
+      case "eqHospitalNameH" => 2
+      case "eqAddressH" => 3
+      case "eqCityH" => 4
+      case "eqStateH" => 5
+      case "eqZipCodeH" => 6
+      case "eqCountryNameH" => 7
+      case "eqPhoneNumberH" => 8
+      case "eqConditionH" => 9
+      case "measureCodeH" => 10
+      case "eqMeasureNameH" => 11
+      case "scoreH" => 12
+      case _ => Int.MinValue
+
+    }
+  }
+}
