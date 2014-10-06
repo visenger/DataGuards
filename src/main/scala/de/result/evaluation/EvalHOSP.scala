@@ -81,8 +81,10 @@ object Evaluator extends App {
       val containsAttrNum: List[(Long, List[Int])] = logDataTuples.filter(_._2.contains(attrNum))
       val noisyIdx: List[Long] = containsAttrNum.map(_._1)
       println("noisyIdx = " + noisyIdx.size)
-    }
+      //todo 1: for each attr, compute P, R and F1.
 
+    }
+    //todo 2: for each %noise create an entry
   }
 
 
