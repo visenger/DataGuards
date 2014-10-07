@@ -235,3 +235,22 @@ case class JointCustOrder(var custKey: String,
 
 }
 
+object TPCHTuple {
+  def getIdxByAttrName(attr: String): Int = {
+
+
+    attr match {
+      case "eqNames" => 2
+      case "eqAddr" => 3
+      case "eqNatkey" => 4
+      case "eqPhone" => 5
+      case "eqAcc" => 6
+      case "eqMrkt" => 7
+      case _ => Int.MinValue
+
+    }
+
+
+  }
+}
+
