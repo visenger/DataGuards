@@ -108,31 +108,43 @@ object HOSPEvaluator extends App {
         val attrNum: Int = HospTuple.getIdxByAttrName(attrName)
 
         val containsAttrNum: List[(Long, List[Int])] = logDataTuples.filter(_._2.contains(attrNum))
-        val noisyIdx: List[Long] = containsAttrNum.map(_._1)
-        //println("attrFileName = " + attrName + "; attr num= " + attrNum + "; noise elements inserted = " + noisyIdx.size)
+        val noisyIdxInserted: List[Long] = containsAttrNum.map(_._1)
+        //println("attrFileName = " + attrName + "; attr num= " + attrNum + "; noise elements inserted = " + noisyIdxInserted.size)
 
         val inferred: List[String] = Source.fromFile(attrFileName).getLines().toList
 
         //everything we found of form eqCityH(2459, MELROSE PARK, 2472, MELROSE PARKtypo)
         //converted into (2459, MELROSE PARK), (2472, MELROSE PARKtypo)
-        val atoms: List[(AttrAtom, AttrAtom)] = convertToAttrAtoms(inferred)
+        val allAtomsFound: List[(AttrAtom, AttrAtom)] = convertToAttrAtoms(inferred)
 
-        //grouping on idx Long -> List[(AttrAtom,AttrAtom)] indexes and corresponding inferred atoms.
-        val structuredAtoms: List[(Long, List[(AttrAtom, AttrAtom)])] = noisyIdx.map(i => {
+        //grouping on idx Long -> List[(AttrAtom,AttrAtom)] indexes and corresponding inferred allAtomsFound.
+        val whichIdxIsFound: List[(Long, List[(AttrAtom, AttrAtom)])] = noisyIdxInserted.map(i => {
           val idx: String = i.toString
-          val inferredVals: List[(AttrAtom, AttrAtom)] = atoms.filter(a => {
-            a._1.id == idx || a._2.id == idx
+          val inferredVals: List[(AttrAtom, AttrAtom)] = allAtomsFound.filter(a => {
+            (a._1.id == idx || a._2.id == idx)
           })
           i -> inferredVals
         })
 
         // which idx were not found
-        val withEmptyList: List[(Long, List[(AttrAtom, AttrAtom)])] = structuredAtoms.filter(_._2.isEmpty)
+        val withEmptyList: List[(Long, List[(AttrAtom, AttrAtom)])] = whichIdxIsFound.filter(_._2.isEmpty)
 
-        val tp: Int = structuredAtoms.size - withEmptyList.size
-        val correct: Int = noisyIdx.size
+        // tp: selected and correct
+        val selectedAndCorrect: List[(Long, List[(AttrAtom, AttrAtom)])] = whichIdxIsFound.map(e => {
+          val idx = e._1
+          val differentVals: List[(AttrAtom, AttrAtom)] = e._2.filter(t => {
+            t._1.value != t._2.value
+          })
+          idx -> differentVals
+        }).filter(_._2.nonEmpty)
+
+        // val correct= tp + fn
+        // val selected= tp + fp
+        val selected: Int = whichIdxIsFound.size - withEmptyList.size
+        val correct: Int = noisyIdxInserted.size
+        val tp: Int = selectedAndCorrect.size //withEmptyList.size
         //        println("noisy elements inserted = " + correct + " | found elements " + tp)
-        val precision = tp.toDouble / tp.toDouble
+        val precision = tp.toDouble / selected.toDouble
         val recall = tp.toDouble / correct.toDouble
         val f_measure = round(2 * precision * recall / (precision + recall))(4)
         //        println(s"Attribute: $attrName precision=${precision} recall= ${recall} F measure= ${f_measure} \n")

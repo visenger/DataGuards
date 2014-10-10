@@ -86,7 +86,7 @@ class Evaluator(var dataset:Option[DataSet] = None: Option[DataSet], dirName: St
         val structuredAtoms: List[(Long, List[(AttrAtom, AttrAtom)])] = noisyIdx.map(i => {
           val idx: String = i.toString
           val inferredVals: List[(AttrAtom, AttrAtom)] = atoms.filter(a => {
-            a._1.id == idx || a._2.id == idx
+            (a._1.id == idx || a._2.id == idx) && (a._1.value != a._2.value)
           })
           i -> inferredVals
         })
