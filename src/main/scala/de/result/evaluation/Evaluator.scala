@@ -54,7 +54,7 @@ class PredicatesGrouper(dirName: String, fileName: String) {
 }
 
 
-class Evaluator(var dataset:Option[DataSet] = None: Option[DataSet], dirName: String, logFileName: String) {
+class Evaluator(var dataset: Option[DataSet] = None: Option[DataSet], dirName: String, logFileName: String) {
 
   def runEvaluator = {
 

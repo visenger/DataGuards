@@ -38,6 +38,7 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       HospTuple(providerID.toString.replace('"', ' ').trim, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
     })
 
+
     val tuplesWithId: RDD[(Long, HospTuple)] = tupled.zipWithUniqueId().map(_.swap)
     val tuples: Map[Long, HospTuple] = tuplesWithId.collect().toMap
     sc.stop

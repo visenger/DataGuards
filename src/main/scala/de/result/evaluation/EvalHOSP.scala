@@ -143,11 +143,10 @@ object HOSPEvaluator extends App {
         val selected: Int = whichIdxIsFound.size - withEmptyList.size
         val correct: Int = noisyIdxInserted.size
         val tp: Int = selectedAndCorrect.size //withEmptyList.size
-        //        println("noisy elements inserted = " + correct + " | found elements " + tp)
+        //
         val precision = tp.toDouble / selected.toDouble
         val recall = tp.toDouble / correct.toDouble
         val f_measure = round(2 * precision * recall / (precision + recall))(4)
-        //        println(s"Attribute: $attrName precision=${precision} recall= ${recall} F measure= ${f_measure} \n")
 
         attrName match {
           case "eqAddressH" => {

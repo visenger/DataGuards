@@ -1,6 +1,7 @@
 package de.util
 
 import com.typesafe.config.{Config, ConfigFactory}
+import de.data.preparation.HospTuple
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
@@ -151,6 +152,37 @@ object TestConverter extends App {
   def convertToInt(l: List[String]): List[Int] = {
     l.map(_.trim.toInt)
   }
+}
+
+object HospStat extends App {
+  val config = ConfigFactory.load()
+
+
+  val sparkConf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("HOSP")
+  val sc: SparkContext = new SparkContext(sparkConf)
+
+  //val header: String = sc.textFile(datapath).first()
+
+  val filteredHeader: RDD[String] = sc.textFile(s"${config.getString("data.hosp.path")}/hosp-1.tsv")
+  val strCount: Long = filteredHeader.count()
+  //    val filteredHeader: RDD[String] = sc.parallelize(sc.textFile(datapath).filter(!_.equals(header)).take(200))
+  val tupled: RDD[HospTuple] = filteredHeader.map(line => {
+    val Array(providerID, hospitalName, address, city, state, zipCode, countyName, phoneNumber, condition, measureID, measureName, score, sample, footnote, measureStartDate, measureEndDate) = line.split( s"""","""")
+    HospTuple(providerID.toString.replace('"', ' ').trim, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
+  })
+
+  val count = tupled.count()
+
+  val groupedById: RDD[(String, scala.Iterable[HospTuple])] = tupled.groupBy(_.providerID)
+  val data: List[(String, Iterable[HospTuple])] = groupedById.collect().toList
+  sc.stop
+
+
+  data foreach (g => {
+    println(s"${g._1} : ${g._2.size} : % ${(g._2.size.toDouble / count.toDouble) * 100.0} : count= $strCount")
+  })
+
+
 }
 
 
