@@ -13,14 +13,14 @@ object EvalTPCH extends App {
   val logFileName = "log-noise"
 
   val evaluator = new Evaluator(Some(DataSet.TPCH), dirName, logFileName)
-  evaluator.runEvaluator
+  evaluator.runTPCHEvaluator
 
 }
 
 object TPCHResultsGrouper extends App {
   val config = ConfigFactory.load()
   val dirName = config.getString("data.tpch.resultFolder")
-  val fileName = "output-tpch"
+  val fileName = "output-tpch-interleaved"
 
   val predicatesPreparator: PredicatesGrouper = new PredicatesGrouper(dirName, fileName)
   predicatesPreparator.runGrouper

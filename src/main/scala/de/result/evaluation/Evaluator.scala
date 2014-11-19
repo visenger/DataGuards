@@ -6,6 +6,7 @@ import de.data.preparation.{TPCHTuple, HospTuple, DataSet}
 import de.data.preparation.DataSet.DataSet
 import de.util.Util
 
+
 import scala.io.Source
 
 /**
@@ -17,7 +18,7 @@ class PredicatesGrouper(dirName: String, fileName: String) {
 
 
   def runGrouper = {
-    for (i <- 2 to 10 if i % 2 == 0) {
+    for (i <- 2 to 2 if i % 2 == 0) {
 
       val outputLines: List[String] = Source.fromFile(s"$dirName/$i/$fileName-$i.db").getLines().toList
 
@@ -26,8 +27,8 @@ class PredicatesGrouper(dirName: String, fileName: String) {
 
       groupedAtoms.foreach(g => {
         val name = g._1
-        val atoms = if (name.startsWith("eq")) deduplicateTuples(g._2, name) else g._2
-        Util.writeToFile(atoms, s"$dirName/$i/$name-$i.db")
+        val atoms = if (name.startsWith("eq")) deduplicateTuples(g._2, name) else deduplicateArray(g._2, name)
+        Util.writeToFile(atoms, s"$dirName/$i/$name-interleaved-$i.db")
       })
 
 
@@ -51,14 +52,31 @@ class PredicatesGrouper(dirName: String, fileName: String) {
       s"$attrName(${t._1.id}, ${t._1.value}, ${t._2.id}, ${t._2.value})"
     })
   }
+
+
+  private def deduplicateArray(attrLines: List[String], attrName: String): List[String] = {
+
+    val attrList: List[IDTuple] = attrLines.map(a => {
+      val innerPart: String = a.substring(a.indexWhere(_ == '(') + 1, a.indexWhere(_ == ')')).replace('"', ' ')
+      val Array(id1, id2) = innerPart.split(',')
+      IDTuple(id1.trim, id2.trim)
+    })
+    val dedupicatedAttrs: Set[IDTuple] = attrList.toSet
+
+
+    val attrs: Set[String] = dedupicatedAttrs.map(a => {
+      s"$attrName(${a.id1}, ${a.id2})"
+    })
+    attrs.toList
+  }
 }
 
 
 class Evaluator(var dataset: Option[DataSet] = None: Option[DataSet], dirName: String, logFileName: String) {
 
-  def runEvaluator = {
+  def runTPCHEvaluator = {
 
-    for (i <- 2 to 10 if i % 2 == 0) {
+    for (i <- 2 to 2 if i % 2 == 0) {
 
       val logData: List[String] = Source.fromFile(s"$dirName/$i/$logFileName-$i.tsv").getLines().toList
       val logDataTuples: List[(Long, List[Int])] = convertLogData(logData)
@@ -67,9 +85,9 @@ class Evaluator(var dataset: Option[DataSet] = None: Option[DataSet], dirName: S
 
       for {
         attrFileName <- new File(s"$dirName/$i").listFiles().toIterator
-        if attrFileName.isFile && attrFileName.getName.startsWith("eq")
+        if attrFileName.isFile && attrFileName.getName.startsWith("eq") && attrFileName.getName.contains("interleaved")
       } {
-        val attrName: String = attrFileName.getName.takeWhile(_ != '-')
+        /*val attrName: String = attrFileName.getName.takeWhile(_ != '-')
 
         val attrNum: Int = getIdxByName(attrName)
 
@@ -100,8 +118,56 @@ class Evaluator(var dataset: Option[DataSet] = None: Option[DataSet], dirName: S
         val precision = tp.toDouble / tp.toDouble
         val recall = tp.toDouble / correct.toDouble
         val f_measure = 2 * precision * recall / (precision + recall)
-        println(s"Attribute: $attrName precision=${precision} recall= ${recall} F measure= ${f_measure} \n")
+        */
 
+        val attrName: String = attrFileName.getName.takeWhile(_ != '-')
+
+        val attrNum: Int = TPCHTuple.getIdxByAttrName(attrName)
+
+        val containsAttrNum: List[(Long, List[Int])] = logDataTuples.filter(_._2.contains(attrNum))
+        val noisyIdxInserted: List[Long] = containsAttrNum.map(_._1)
+        //println("attrFileName = " + attrName + "; attr num= " + attrNum + "; noise elements inserted = " + noisyIdxInserted.size)
+
+        val inferred: List[String] = Source.fromFile(attrFileName).getLines().toList
+
+        //everything we found of form eqCityH(2459, MELROSE PARK, 2472, MELROSE PARKtypo)
+        //converted into (2459, MELROSE PARK), (2472, MELROSE PARKtypo)
+        val allAtomsFound: List[(AttrAtom, AttrAtom)] = convertToAttrAtoms(inferred)
+
+        //grouping on idx Long -> List[(AttrAtom,AttrAtom)] indexes and corresponding inferred allAtomsFound.
+        val whichIdxIsFound: List[(Long, List[(AttrAtom, AttrAtom)])] = noisyIdxInserted.map(i => {
+          val idx: String = i.toString
+          val inferredVals: List[(AttrAtom, AttrAtom)] = allAtomsFound.filter(a => {
+            (a._1.id == idx || a._2.id == idx)
+          })
+          i -> inferredVals
+        })
+
+        // which idx were not found
+        val withEmptyList: List[(Long, List[(AttrAtom, AttrAtom)])] = whichIdxIsFound.filter(_._2.isEmpty)
+
+        // tp: selected and correct
+        val selectedAndCorrect: List[(Long, List[(AttrAtom, AttrAtom)])] = whichIdxIsFound.map(e => {
+          val idx = e._1
+          val differentVals: List[(AttrAtom, AttrAtom)] = e._2.filter(t => {
+            t._1.value != t._2.value
+          })
+          idx -> differentVals
+        }).filter(_._2.nonEmpty)
+        import de.util.Util._
+        // val correct= tp + fn
+        // val selected= tp + fp
+        val selected: Int = whichIdxIsFound.size - withEmptyList.size
+        val correct: Int = noisyIdxInserted.size
+        val tp: Int = selectedAndCorrect.size //withEmptyList.size
+        //
+        val precision = tp.toDouble / selected.toDouble
+        val recall = tp.toDouble / correct.toDouble
+        //        val f_measure = round(2 * precision * recall / (precision + recall))(4)
+        val f_measure = 2 * precision * recall / (precision + recall)
+
+
+        println(s"Attribute: $attrName precision=${precision} recall= ${recall} F measure= ${f_measure} \n")
 
       }
       //todo 2: for each %noise create an entry
@@ -151,6 +217,17 @@ class Evaluator(var dataset: Option[DataSet] = None: Option[DataSet], dirName: S
 case class AttrAtom(id: String, value: String) {
   override def equals(other: scala.Any): Boolean = other match {
     case AttrAtom(oId, oValue) => id == oId && value == oValue
+    case _ => false
+  }
+}
+
+case class IDTuple(id1: String, id2: String) {
+
+
+  override def hashCode(): Int = id1.hashCode + id2.hashCode
+
+  override def equals(other: scala.Any): Boolean = other match {
+    case IDTuple(oId1, oId2) => oId1.equals(id1) && oId2.equals(id2) || oId1.equals(id2) && oId2.equals(id1)
     case _ => false
   }
 }
