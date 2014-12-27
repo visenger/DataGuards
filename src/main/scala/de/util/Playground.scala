@@ -44,8 +44,8 @@ object Playground {
 
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
     import sqlContext.createSchemaRDD
-    customers.registerAsTable("customers")
-    orders.registerAsTable("orders")
+    customers.registerTempTable("customers")
+    orders.registerTempTable("orders")
 
     val jointTables = sqlContext.sql("SELECT c.custKey, c.name, c.addr, c.natKey, c.phone, c.acc, c.mrkt,  " +
       "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
@@ -78,8 +78,8 @@ object Playground {
     //jointTables.take(25).map(m => s"cust key: ${m(0)} cust name: ${m(1)} order key: ${m(2)}").foreach(println)
     jointCustOrder.take(25).map(m => s"customer: ${m.custKey} name: ${m.name} bought item: ${m.orderKey} for total price: ${m.totalPrice}").foreach(println)
 
-    val indexedTabs: RDD[(JointCustOrder, Long)] = jointCustOrder.zipWithUniqueId()
-    indexedTabs.saveAsTextFile(config.getString("data.tpch.resultFolder"))
+    //    val indexedTabs: RDD[(JointCustOrder, Long)] = jointCustOrder.zipWithUniqueId()
+    //    indexedTabs.saveAsTextFile(config.getString("data.tpch.resultFolder"))
 
     //    import sqlContext._
     //    val anotherAuto = customers.where('mrkt === "AUTOMOBILE").select('name)

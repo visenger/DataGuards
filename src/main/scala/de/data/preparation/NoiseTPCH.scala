@@ -43,8 +43,8 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
 
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
     import sqlContext.createSchemaRDD
-    customers.registerAsTable("customers")
-    orders.registerAsTable("orders")
+    customers.registerTempTable("customers")
+    orders.registerTempTable("orders")
 
     val jointTables = sqlContext.sql("SELECT c.custKey, c.name, c.addr, c.natKey, c.phone, c.acc, c.mrkt,  " +
       "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
