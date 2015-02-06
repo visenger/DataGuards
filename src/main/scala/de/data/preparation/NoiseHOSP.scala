@@ -159,7 +159,27 @@ case class HospTuple(providerID: String,
                      var measureStartDate: String,
                      var measureEndDate: String) {
 
-
+/*
+-ProviderNumber varchar(255),
+HospitalName varchar(255),
+Address1 varchar(255),
+Address2 varchar(255),
+Address3 varchar(255),
+-City varchar(255),
+-State varchar(255),
+-ZIPCode varchar(255),
+CountryName varchar(255),
+-PhoneNumber varchar(255),
+HospitalType varchar(255),
+HospitalOwner varchar(255),
+EmergencyService varchar(255),
+-Condition varchar(255),
+-MeasureCode varchar(255),
+-MeasureName varchar(255),
+Score varchar(255),
+Sample varchar(255),
+-StateAvg varchar(255)
+*/
   //setters
 
   def makeNoisyhospitalName(str: String) {
