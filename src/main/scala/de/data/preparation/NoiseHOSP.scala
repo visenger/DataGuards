@@ -98,7 +98,8 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val predicates: Iterable[String] = input.map(t => {
       t._2.createPredicates(t._1)
     })
-    predicates.toList ::: predicatesZipTSV
+    val predZipTSV = new ZipData().predicatesZipTSV
+    predicates.toList ::: predZipTSV
   }
 
   def prepareList(input: List[(Long, Int)]): List[String] = {
@@ -115,22 +116,22 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     output.toList
   }
 
-  def predicatesZipTSV: List[String] = {
-    val zipFile = s"${config.getString("data.hosp.zip")}/zipcode.csv"
-    val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
-
-    val zipPredicates = zipLines map (l => {
-      val line = l._1
-      val idx = l._2
-      val Array(zip, state) = line.split(",")
-      val predicates =
-        s"""zipZ(\"$idx\", \"$zip\")
-         |stateZ(\"$idx\", \"$state\")
-       """.stripMargin
-      predicates
-    })
-    zipPredicates.toList
-  }
+//  def predicatesZipTSV: List[String] = {
+//    val zipFile = s"${config.getString("data.zip.path")}/zipcode.csv"
+//    val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
+//
+//    val zipPredicates = zipLines map (l => {
+//      val line = l._1
+//      val idx = l._2
+//      val Array(zip, state) = line.split(",")
+//      val predicates =
+//        s"""zipZ(\"$idx\", \"$zip\")
+//            |stateZ(\"$idx\", \"$state\")
+//       """.stripMargin
+//      predicates
+//    })
+//    zipPredicates.toList
+//  }
 
   private def insertNoiseInto(tuple: HospTuple, idx: List[(Long, Int)]): HospTuple = {
     val attrs: List[Int] = idx.map(_._2)
@@ -159,27 +160,27 @@ case class HospTuple(providerID: String,
                      var measureStartDate: String,
                      var measureEndDate: String) {
 
-/*
--ProviderNumber varchar(255),
-HospitalName varchar(255),
-Address1 varchar(255),
-Address2 varchar(255),
-Address3 varchar(255),
--City varchar(255),
--State varchar(255),
--ZIPCode varchar(255),
-CountryName varchar(255),
--PhoneNumber varchar(255),
-HospitalType varchar(255),
-HospitalOwner varchar(255),
-EmergencyService varchar(255),
--Condition varchar(255),
--MeasureCode varchar(255),
--MeasureName varchar(255),
-Score varchar(255),
-Sample varchar(255),
--StateAvg varchar(255)
-*/
+  /*
+  -ProviderNumber varchar(255),
+  HospitalName varchar(255),
+  Address1 varchar(255),
+  Address2 varchar(255),
+  Address3 varchar(255),
+  -City varchar(255),
+  -State varchar(255),
+  -ZIPCode varchar(255),
+  CountryName varchar(255),
+  -PhoneNumber varchar(255),
+  HospitalType varchar(255),
+  HospitalOwner varchar(255),
+  EmergencyService varchar(255),
+  -Condition varchar(255),
+  -MeasureCode varchar(255),
+  -MeasureName varchar(255),
+  Score varchar(255),
+  Sample varchar(255),
+  -StateAvg varchar(255)
+  */
   //setters
 
   def makeNoisyhospitalName(str: String) {
@@ -275,17 +276,17 @@ Sample varchar(255),
     import Util._
     s"""
        |providerNumberH("$idx", "${normalizeGroundAtom(this.providerID)}")
-       |hospitalNameH("$idx", "${normalizeGroundAtom(this.hospitalName)}")
-       |addressH("$idx", "${normalizeGroundAtom(this.address)}")
-       |cityH("$idx", "${normalizeGroundAtom(this.city)}")
-       |stateH("$idx", "${normalizeGroundAtom(this.state)}")
-       |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
-       |countryNameH("$idx", "${normalizeGroundAtom(this.countyName)}")
-       |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
-       |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
-       |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
-       |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
-       |scoreH("$idx", "${normalizeGroundAtom(this.score)}")
+                                                                          |hospitalNameH("$idx", "${normalizeGroundAtom(this.hospitalName)}")
+                                                                                                                                             |addressH("$idx", "${normalizeGroundAtom(this.address)}")
+                                                                                                                                                                                                      |cityH("$idx", "${normalizeGroundAtom(this.city)}")
+                                                                                                                                                                                                                                                         |stateH("$idx", "${normalizeGroundAtom(this.state)}")
+                                                                                                                                                                                                                                                                                                              |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
+                                                                                                                                                                                                                                                                                                                                                                       |countryNameH("$idx", "${normalizeGroundAtom(this.countyName)}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                       |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |scoreH("$idx", "${normalizeGroundAtom(this.score)}")
      """.stripMargin
   }
 }

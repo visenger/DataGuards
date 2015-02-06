@@ -29,6 +29,12 @@ class NoiseInjector() {
     this
   }
 
+  def hosp2(path: String): this.type = {
+    dataset = Some(HOSP2)
+    dataPath = path
+    this
+  }
+
 
   def noisePercentage(n: Int): this.type = {
     noiseP = n
@@ -59,6 +65,13 @@ class NoiseInjector() {
         }
         new HospNoiseInjector(dataPath, noiseP, resultFolder).inject
       }
+      case Some(HOSP2) => {
+        val resultFolder = resultPath match {
+          case Some(x) => x
+          case None => config.getString("data.hosp2.resultFolder")
+        }
+        new Hosp2NoiseInjector(dataPath, noiseP, resultFolder).inject
+      }
       case None => println("data is not specified.")
     }
   }
@@ -72,17 +85,20 @@ object NoiseInjector {
 
 object DataSet extends Enumeration {
   type DataSet = Value
-  val HOSP, TPCH = Value
+  val HOSP, HOSP2, TPCH = Value
 }
 
 
 object PlaygroundForNoise extends App {
   private val config: Config = ConfigFactory.load()
 
-  //  for {i <- 4 to 10 if i % 2 == 0} {
-  NoiseInjector.definedFor.hosp(config.getString("data.hosp.path")).noisePercentage(40).writeTo(config.getString("data.hosp.resultFolder")).inject
-  //    NoiseInjector.definedFor.tpch(config.getString("data.tpch.path")).noisePercentage(i).inject
-  //  }
+  for {i <- 2 to 2 if i % 2 == 0} {
+
+    NoiseInjector.definedFor.hosp2(config.getString("data.hosp2.path")).noisePercentage(i)
+      .writeTo(config.getString("data.hosp2.resultFolder")).inject
+
+    //    NoiseInjector.definedFor.tpch(config.getString("data.tpch.path")).noisePercentage(i).inject
+  }
 }
 
 

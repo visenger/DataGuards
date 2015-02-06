@@ -1,7 +1,7 @@
 package de.util
 
 import com.typesafe.config.{Config, ConfigFactory}
-import de.data.preparation.HospTuple
+import de.data.preparation.{Hosp2Tuple, HospTuple}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.SparkContext._
@@ -92,10 +92,12 @@ object Playground {
 }
 
 object TestMatch extends App {
-  val line = "579|67057|O|161591.06|1998-03-11|2-HIGH|Clerk#000000862|0| regular instructions. blithely even p|"
-  val Array(orderKey, custKey, orderStatus, totalPrice, orderDate, orderPriority, clerk, shipPriority, comment) = line.split('|')
-  val order = Order(orderKey.toString, custKey.toString, orderStatus.toString, totalPrice.toString, orderDate.toString, orderPriority.toString, clerk.toString, shipPriority.toString, comment.toString)
-  println("order = " + order.toString)
+  val line = "10018,CALLAHAN EYE FOUNDATION HOSPITAL,1720 UNIVERSITY BLVD,,,BIRMINGHAM,AL,35233,JEFFERSON,2053258100,Acute Care Hospitals,Voluntary non-profit - Private,Yes,Surgical Infection Prevention,SCIP-CARD-2,surgery patients who were taking heart drugs called beta blockers before coming to the hospital&#54; who were kept on the beta blockers during the period just before and after their surgery,,,AL_SCIP-CARD-2"
+  val Array(providerID ,x1 ,x2 ,x3 ,x4 , city,state ,zipCode ,x5,phoneNumber ,x6 ,x7 ,x8,condition ,measureID ,measureName ,x9,x10 ,stateAvg ) = line.split( ',')
+
+ val item= Hosp2Tuple(providerID.toString.replace('"', ' ').trim, city.toString, state.toString, zipCode.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, stateAvg.toString)
+
+  println("hosp2 = " + item.toString)
 
 }
 
