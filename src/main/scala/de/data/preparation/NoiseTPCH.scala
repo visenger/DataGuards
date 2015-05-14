@@ -24,91 +24,92 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
   val config = ConfigFactory.load()
 
   def inject = {
-    println(s"input = $datapath; noise = $noisePercentage; result folder= $writeTo")
+    for {setSize <- Array(500, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000)} {
+      println(s"input = $datapath; noise = $noisePercentage; result folder= $writeTo")
 
-    val config: Config = ConfigFactory.load()
+      val config: Config = ConfigFactory.load()
 
-    val sparkConf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("SPARK")
-    val sc: SparkContext = new SparkContext(sparkConf)
+      val sparkConf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("SPARK")
+      val sc: SparkContext = new SparkContext(sparkConf)
 
-    val orders: RDD[Order] = sc.textFile(config.getString("data.tpch.orders")).map(line => {
-      val Array(orderKey, custKey, orderStatus, totalPrice, orderDate, orderPriority, clerk, shipPriority, comment) = line.split('|')
-      Order(orderKey.toString, custKey.toString, orderStatus.toString, totalPrice.toString, orderDate.toString, orderPriority.toString, clerk.toString, shipPriority.toString, comment.toString)
-    })
+      val orders: RDD[Order] = sc.textFile(config.getString("data.tpch.orders")).map(line => {
+        val Array(orderKey, custKey, orderStatus, totalPrice, orderDate, orderPriority, clerk, shipPriority, comment) = line.split('|')
+        Order(orderKey.toString, custKey.toString, orderStatus.toString, totalPrice.toString, orderDate.toString, orderPriority.toString, clerk.toString, shipPriority.toString, comment.toString)
+      })
 
-    val customers = sc.textFile(config.getString("data.tpch.customers")).map(line => {
-      val Array(custKey, name, addr, natKey, phone, acc, mrkt, comment) = line.split('|')
-      Customer(custKey.toString, name.toString, addr.toString, natKey.toString, phone.toString, acc.toString, mrkt.toString, comment.toString)
-    })
+      val customers = sc.textFile(config.getString("data.tpch.customers")).map(line => {
+        val Array(custKey, name, addr, natKey, phone, acc, mrkt, comment) = line.split('|')
+        Customer(custKey.toString, name.toString, addr.toString, natKey.toString, phone.toString, acc.toString, mrkt.toString, comment.toString)
+      })
 
-    val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-    import sqlContext.createSchemaRDD
-    customers.registerTempTable("customers")
-    orders.registerTempTable("orders")
+      val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+      import sqlContext.createSchemaRDD
+      customers.registerTempTable("customers")
+      orders.registerTempTable("orders")
 
-    val jointTables = sqlContext.sql("SELECT c.custKey, c.name, c.addr, c.natKey, c.phone, c.acc, c.mrkt,  " +
-      "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
-      "FROM customers c, orders o " +
-      "WHERE c.custKey=o.custKey")
+      val jointTables = sqlContext.sql("SELECT c.custKey, c.name, c.addr, c.natKey, c.phone, c.acc, c.mrkt,  " +
+        "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
+        "FROM customers c, orders o " +
+        "WHERE c.custKey=o.custKey")
 
-    //todo: split jointTables into smaller parts, which will be suitable for Rockit inference.
-
-
-    val tablePart: RDD[Row] = sc.parallelize(jointTables.take(100000))
-
-    /*
-    * 0 c.custKey,
-    * 1 c.name,
-    * 2 c.addr,
-    * 3 c.natKey,
-    * 4 c.phone,
-    * 5 c.acc,
-    * 6 c.mrkt,
-    * 7 o.orderKey,
-    * 8 o.orderStatus,
-    * 9 o.totalPrice,
-    * 10 o.orderDate,
-    * 11 o.orderPriority,
-    * 12 o.clerk
-    * */
+      //todo: split jointTables into smaller parts, which will be suitable for Rockit inference.
 
 
-    val jointCustOrder: RDD[JointCustOrder] = tablePart.map(m =>
-      JointCustOrder(s"${m(0)}", s"${m(1)}", s"${m(2)}", s"${m(3)}", s"${m(4)}", s"${m(5)}", s"${m(6)}", s"${m(7)}", s"${m(8)}", s"${m(9)}", s"${m(10)}", s"${m(11)}", s"${m(12)}"))
+      val tablePart: RDD[Row] = sc.parallelize(jointTables.take(setSize))
 
-    val indexedTabs: RDD[(Long, JointCustOrder)] = jointCustOrder.zipWithUniqueId().map(e => e.swap)
+      /*
+      * 0 c.custKey,
+      * 1 c.name,
+      * 2 c.addr,
+      * 3 c.natKey,
+      * 4 c.phone,
+      * 5 c.acc,
+      * 6 c.mrkt,
+      * 7 o.orderKey,
+      * 8 o.orderStatus,
+      * 9 o.totalPrice,
+      * 10 o.orderDate,
+      * 11 o.orderPriority,
+      * 12 o.clerk
+      * */
 
-    val count: Long = indexedTabs.count()
 
-    val noiseElements: List[(Long, Int)] = calculateNoise(count)
-    val groupedByKey: Map[Long, List[(Long, Int)]] = noiseElements.groupBy(_._1)
+      val jointCustOrder: RDD[JointCustOrder] = tablePart.map(m =>
+        JointCustOrder(s"${m(0)}", s"${m(1)}", s"${m(2)}", s"${m(3)}", s"${m(4)}", s"${m(5)}", s"${m(6)}", s"${m(7)}", s"${m(8)}", s"${m(9)}", s"${m(10)}", s"${m(11)}", s"${m(12)}"))
 
-    val compactView: Map[Long, List[Int]] = groupedByKey.map(t => {
-      val attrsList: List[Int] = t._2.map(l => l._2)
-      (t._1, attrsList)
-    })
+      val indexedTabs: RDD[(Long, JointCustOrder)] = jointCustOrder.zipWithUniqueId().map(e => e.swap)
 
-    val dirtyData: RDD[(Long, JointCustOrder)] = indexedTabs.map(t => {
-      if (compactView.contains(t._1))
-        (t._1, insertNoiseInto(t._2, compactView.getOrElse(t._1, List())))
-      else (t._1, t._2)
-    })
+      val count: Long = indexedTabs.count()
 
-    val markovLogicPredicates: RDD[String] = dirtyData.map(t => {
-      t._2.createPredicates(t._1)
-    })
+      val noiseElements: List[(Long, Int)] = calculateNoise(count)
+      val groupedByKey: Map[Long, List[(Long, Int)]] = noiseElements.groupBy(_._1)
 
-    //todo: folder namings
-    markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/$noisePercentage")
+      val compactView: Map[Long, List[Int]] = groupedByKey.map(t => {
+        val attrsList: List[Int] = t._2.map(l => l._2)
+        (t._1, attrsList)
+      })
 
-    sc.stop()
+      val dirtyData: RDD[(Long, JointCustOrder)] = indexedTabs.map(t => {
+        if (compactView.contains(t._1))
+          (t._1, insertNoiseInto(t._2, compactView.getOrElse(t._1, List())))
+        else (t._1, t._2)
+      })
 
-    val logData: Iterable[String] = compactView.map(t => {
-      s"""${t._1.toString}\t${t._2.mkString("\t")}"""
-    })
+      val markovLogicPredicates: RDD[String] = dirtyData.map(t => {
+        t._2.createPredicates(t._1)
+      })
 
-    Util.writeToFile(logData.toList, s"$writeTo/$noisePercentage/log-noise-$noisePercentage.tsv")
+      //todo: folder namings
+      markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/$noisePercentage/$setSize")
 
+      sc.stop()
+
+      val logData: Iterable[String] = compactView.map(t => {
+        s"""${t._1.toString}\t${t._2.mkString("\t")}"""
+      })
+
+      Util.writeToFile(logData.toList, s"$writeTo/$noisePercentage/$setSize/log-dataSize-$setSize-noise-$noisePercentage.tsv")
+    }
   }
 
 
@@ -205,33 +206,41 @@ case class JointCustOrder(var custKey: String,
 
   val createPredicates: (Long) => String = (idx) => {
     import Util._
-    //    s"""
-    //       |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
-    //       |name("$idx", "${normalizeGroundAtom(this.name)}")
-    //       |addr("$idx", "${normalizeGroundAtom(this.addr)}")
-    //       |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
-    //       |phone("$idx", "${normalizeGroundAtom(this.phone)}")
-    //       |acc("$idx", "${normalizeGroundAtom(this.acc)}")
-    //       |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
-    //       |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
-    //       |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
-    //       |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
-    //       |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
-    //       |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
-    //       |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
-    //     """.stripMargin
+//        s"""custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
+//           |name("$idx", "${normalizeGroundAtom(this.name)}")
+//           |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+//           |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+//           |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+//           |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+//           |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+//           |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+//           |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
+//           |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
+//           |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
+//           |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
+//           |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
+//         """.stripMargin
 
-    s"""
-       |custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
-       |name("$idx", "${normalizeGroundAtom(this.name)}")
-       |addr("$idx", "${normalizeGroundAtom(this.addr)}")
-       |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
-       |phone("$idx", "${normalizeGroundAtom(this.phone)}")
-       |acc("$idx", "${normalizeGroundAtom(this.acc)}")
-       |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
-       |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+    s"""custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
+        |name("$idx", "${normalizeGroundAtom(this.name)}")
+        |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+        |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+        |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+        |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+        |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+        |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
      """.stripMargin
   }
+
+  val dictionary: String =
+  s"""name \t 2
+     |addr \t 3
+     |natKey \t 4
+     |phone \t 5
+     |acc \t 6
+     |mrkt \t 7
+   """.stripMargin
+
 
 }
 

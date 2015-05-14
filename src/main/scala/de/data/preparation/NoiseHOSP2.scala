@@ -24,12 +24,12 @@ class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val
   val config = ConfigFactory.load()
   val configAttrCount: String = "data.hosp2.attrCount"
 
-  def inject = {
+  def inject() = {
 
     val dir: File = new File(datapath)
 
 
-    for {file <- dir.listFiles() if file.getName.startsWith("hospital_1k")} {
+    for {file <- dir.listFiles() if file.getName.startsWith("hospital")} {
       val input: Map[Long, Hosp2Tuple] = readData(file.getAbsolutePath)
       val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
       val output: Map[Long, Hosp2Tuple] = insertNoise(input, noiseElements)
@@ -65,7 +65,7 @@ class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val
 
     val tuplesWithId: RDD[(Long, Hosp2Tuple)] = tupled.zipWithUniqueId().map(_.swap)
     val tuples: Map[Long, Hosp2Tuple] = tuplesWithId.collect().toMap
-    sc.stop
+    sc.stop()
 
     tuples
   }

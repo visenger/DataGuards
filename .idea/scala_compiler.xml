@@ -4,7 +4,7 @@
     <parameters>
       <parameter value="-target:jvm-1.7" />
     </parameters>
-    <profile name="Maven 1" modules="DataGuards">
+    <profile name="Maven 1" modules="DataGuards,DataGuards">
       <parameters>
         <parameter value="-target:jvm-1.7" />
       </parameters>
