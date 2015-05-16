@@ -24,7 +24,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
   val config = ConfigFactory.load()
 
   def inject = {
-    for {setSize <- Array(500, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000)} {
+    for {setSize <- Array(500/*, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000*/)} {
       println(s"input = $datapath; noise = $noisePercentage; result folder= $writeTo")
 
       val config: Config = ConfigFactory.load()
@@ -55,7 +55,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       //todo: split jointTables into smaller parts, which will be suitable for Rockit inference.
 
 
-      val tablePart: RDD[Row] = sc.parallelize(jointTables.take(setSize))
+      val tablePart: RDD[Row] = sc.parallelize(Random.shuffle(jointTables).take(setSize))
 
       /*
       * 0 c.custKey,
@@ -100,7 +100,8 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       })
 
       //todo: folder namings
-      markovLogicPredicates.saveAsTextFile(s"${config.getString("data.tpch.resultFolder")}/$noisePercentage/$setSize")
+      val outputFolder: String = s"$writeTo/$noisePercentage/$setSize"
+      markovLogicPredicates.saveAsTextFile(outputFolder)
 
       sc.stop()
 
@@ -108,7 +109,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
         s"""${t._1.toString}\t${t._2.mkString("\t")}"""
       })
 
-      Util.writeToFile(logData.toList, s"$writeTo/$noisePercentage/$setSize/log-dataSize-$setSize-noise-$noisePercentage.tsv")
+      Util.writeToFile(logData.toList, s"$outputFolder/log-dataSize-$setSize-noise-$noisePercentage.tsv")
     }
   }
 
