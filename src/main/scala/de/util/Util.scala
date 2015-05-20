@@ -71,6 +71,13 @@ object Util {
     writer.close()
   }
 
+  def writeStrToFile(str: String, fileName: String) {
+    val path: Path = Paths.get(fileName)
+    val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+    writer.write(str)
+    writer.close()
+  }
+
   def writeToFileWithHeader(header: String, db_atoms: List[String], fileName: String) {
     val path: Path = Paths.get(fileName)
     val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)

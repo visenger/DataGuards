@@ -94,10 +94,10 @@ object PlaygroundForNoise extends App {
 
   for {i <- 2 to 10 if i % 2 == 0} {
 
-//    NoiseInjector.definedFor.hosp2(config.getString("data.hosp2.path")).noisePercentage(i)
-//      .writeTo(config.getString("data.hosp2.resultFolder")).inject
+    NoiseInjector.definedFor.hosp2(config.getString("data.hosp2.path")).noisePercentage(i)
+      .writeTo(config.getString("data.hosp2.resultFolder")).inject
 
-       NoiseInjector.definedFor.tpch(config.getString("data.tpch.path")).noisePercentage(i).inject
+//       NoiseInjector.definedFor.tpch(config.getString("data.tpch.path")).noisePercentage(i).inject
   }
 }
 

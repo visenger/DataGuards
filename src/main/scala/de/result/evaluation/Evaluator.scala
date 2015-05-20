@@ -17,7 +17,7 @@ import scala.io.Source
 class PredicatesGrouper(dirName: String, fileName: String) {
 
 
-  def runGrouper = {
+  def runGrouper () = {
     for (i <- 2 to 2 if i % 2 == 0) {
 
       val outputLines: List[String] = Source.fromFile(s"$dirName/$i/$fileName-$i.db").getLines().toList

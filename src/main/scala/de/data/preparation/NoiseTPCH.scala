@@ -55,7 +55,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       //todo: split jointTables into smaller parts, which will be suitable for Rockit inference.
 
 
-      val tablePart: RDD[Row] = sc.parallelize(Random.shuffle(jointTables).take(setSize))
+      val tablePart: RDD[Row] = sc.parallelize(jointTables.take(setSize))
 
       /*
       * 0 c.custKey,
@@ -241,7 +241,23 @@ case class JointCustOrder(var custKey: String,
      |acc \t 6
      |mrkt \t 7
    """.stripMargin
+/*
+//CFD
+eqNames \t 2
+eqAddr \t 3
+eqNatkey \t 4
+eqPhone \t 5
+eqAcc \t 6
+eqMrkt \t 7
 
+//MD
+matchPhone \t 5
+matchAddr \t 3
+
+//interleaved
+shouldMatchPhone \t 5
+shouldMatchAddr \t 3
+*/
 
 }
 
