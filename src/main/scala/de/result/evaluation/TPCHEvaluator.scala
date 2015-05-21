@@ -106,14 +106,34 @@ class TPCHEvaluator() {
         val attrId = x._1
 
         val goldStandard: List[Int] = noiseDictionary.getOrElse(attrId, List())
-        // (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
-        // AttrAtom(id, value)
+
         val foundAtoms: List[(AttrAtom, AttrAtom)] = x._2
         //todo: check whether first oder second are in gold standard
 
 
       }
 
+
+    }
+
+  }
+
+  private def computeFMeasure(input: List[(AttrAtom, AttrAtom)], goldStandard: List[Int]) = {
+    // (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
+    // AttrAtom(id, value)
+
+    for ((first, second) <- input) {
+      val firstId: Int = first.id.toInt
+      val secondId: Int = second.id.toInt
+
+      val firstInGoldStandard: Boolean = goldStandard.contains(firstId)
+      val secondInGoldStandard: Boolean = goldStandard.contains(secondId)
+
+      (firstInGoldStandard, secondInGoldStandard) match {
+        case (true, true) => //fp++
+        case (true, false) | (false, true) => // tp++
+        case (false, false) => //fp++
+      }
 
     }
 
