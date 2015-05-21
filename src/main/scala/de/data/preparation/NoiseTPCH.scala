@@ -24,7 +24,7 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
   val config = ConfigFactory.load()
 
   def inject = {
-    for {setSize <- Array(500/*, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000*/)} {
+    for {setSize <- Array(500 /*, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000*/)} {
       println(s"input = $datapath; noise = $noisePercentage; result folder= $writeTo")
 
       val config: Config = ConfigFactory.load()
@@ -207,57 +207,57 @@ case class JointCustOrder(var custKey: String,
 
   val createPredicates: (Long) => String = (idx) => {
     import Util._
-//        s"""custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
-//           |name("$idx", "${normalizeGroundAtom(this.name)}")
-//           |addr("$idx", "${normalizeGroundAtom(this.addr)}")
-//           |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
-//           |phone("$idx", "${normalizeGroundAtom(this.phone)}")
-//           |acc("$idx", "${normalizeGroundAtom(this.acc)}")
-//           |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
-//           |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
-//           |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
-//           |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
-//           |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
-//           |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
-//           |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
-//         """.stripMargin
+    //        s"""custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
+    //           |name("$idx", "${normalizeGroundAtom(this.name)}")
+    //           |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+    //           |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+    //           |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+    //           |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+    //           |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+    //           |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+    //           |orderStatus("$idx", "${normalizeGroundAtom(this.orderStatus)}")
+    //           |totalPrice("$idx", "${normalizeGroundAtom(this.totalPrice)}")
+    //           |orderDate("$idx", "${normalizeGroundAtom(this.orderDate)}")
+    //           |orderPriority("$idx", "${normalizeGroundAtom(this.orderPriority)}")
+    //           |clerk("$idx", "${normalizeGroundAtom(this.clerk)}")
+    //         """.stripMargin
 
     s"""custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
-        |name("$idx", "${normalizeGroundAtom(this.name)}")
-        |addr("$idx", "${normalizeGroundAtom(this.addr)}")
-        |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
-        |phone("$idx", "${normalizeGroundAtom(this.phone)}")
-        |acc("$idx", "${normalizeGroundAtom(this.acc)}")
-        |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
-        |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+                                                               |name("$idx", "${normalizeGroundAtom(this.name)}")
+                                                                                                                 |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+                                                                                                                                                                   |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+                                                                                                                                                                                                                         |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+                                                                                                                                                                                                                                                                             |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+                                                                                                                                                                                                                                                                                                                             |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+                                                                                                                                                                                                                                                                                                                                                                               |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
      """.stripMargin
   }
 
   val dictionary: String =
-  s"""name \t 2
-     |addr \t 3
-     |natKey \t 4
-     |phone \t 5
-     |acc \t 6
-     |mrkt \t 7
+    s"""name \t 2
+       |addr \t 3
+       |natKey \t 4
+       |phone \t 5
+       |acc \t 6
+       |mrkt \t 7
    """.stripMargin
-/*
-//CFD
-eqNames \t 2
-eqAddr \t 3
-eqNatkey \t 4
-eqPhone \t 5
-eqAcc \t 6
-eqMrkt \t 7
+  /*
+  //CFD
+  eqNames \t 2
+  eqAddr \t 3
+  eqNatkey \t 4
+  eqPhone \t 5
+  eqAcc \t 6
+  eqMrkt \t 7
 
-//MD
-matchPhone \t 5
-matchAddr \t 3
+  //MD
+  matchPhone \t 5
+  matchAddr \t 3
 
-//interleaved
-shouldMatchPhone \t 5
-shouldMatchAddr \t 3
-*/
+  //interleaved
+  shouldMatchPhone \t 5
+  shouldMatchAddr \t 3
+  */
 
 }
 
@@ -272,11 +272,26 @@ object TPCHTuple {
       case "eqPhone" => 5
       case "eqAcc" => 6
       case "eqMrkt" => 7
+      //MD
+      case "matchPhone" => 5
+      case "matchAddr" => 3
+
+      //interleaved
+      case "shouldMatchPhone" => 5
+      case "shouldMatchAddr" => 3
       case _ => Int.MinValue
 
     }
 
 
+  }
+
+  def getAllAttributeIdxs(): List[Int] = {
+
+    val attrCount = ConfigFactory.load().getInt("data.tpch.attrCount")
+
+    val attrsIdx = (2 to attrCount).toList
+    attrsIdx
   }
 }
 
