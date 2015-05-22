@@ -2,9 +2,9 @@ package de.result.evaluation
 
 import com.typesafe.config.{ConfigFactory, Config}
 import de.data.preparation.TPCHTuple
-import de.util.Util
 
 import scala.collection.immutable.Iterable
+import scala.collection.mutable
 import scala.io.Source
 
 /**
@@ -95,32 +95,123 @@ class TPCHEvaluator() {
         (lineId, attrIds)
       }).toMap
 
-      val attrToLineTuples: Map[Int, List[Int]] = generateAttrToLinesDictionary(noiseDictionary)
+      val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLinesDictionary(noiseDictionary)
 
-      println("attrToLineTuples = " + attrToLineTuples)
+      //println("attrToLineTuples = " + attrToLineTuples)
 
       /* Start evaluation computation */
 
       //cfd:
-      for (x <- cfd) yield {
+      var tps_cfd = 0
+      var fps_cfd = 0
+      var fns_cfd = 0
+      for (x <- cfd) {
         val attrId = x._1
 
-        val goldStandard: List[Int] = noiseDictionary.getOrElse(attrId, List())
+        val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
 
         val foundAtoms: List[(AttrAtom, AttrAtom)] = x._2
-        //todo: check whether first oder second are in gold standard
 
+        val (tp, fp, fn) = computeFMeasureForAtoms(foundAtoms, goldStandard)
 
+        tps_cfd += tp
+        fps_cfd += fp
+        fns_cfd += fn
+      }
+      val precision_cfd = tps_cfd.toDouble / (tps_cfd.toDouble + fps_cfd.toDouble)
+      val recall_cfd = tps_cfd.toDouble / (tps_cfd.toDouble + fns_cfd.toDouble)
+      println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd")
+
+      //md:
+      var tps_md = 0
+      var fps_md = 0
+      var fns_md = 0
+      for (m <- md) {
+        val attrId = m._1
+        val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
+        val foundElents: List[IDTuple] = m._2
+
+        val (tp, fp, fn) = computeFMeasure(foundElents, goldStandard)
+        tps_md += tp
+        fps_md += fp
+        fns_md += fn
       }
 
+      val precision_md = tps_md.toDouble / (tps_md.toDouble + fps_md.toDouble)
+      val recall_md = tps_md.toDouble / (tps_md.toDouble + fns_md.toDouble)
+
+      println(s" data size = $j; noise = $i%; task= md only;  precision= $precision_md; recall= $recall_md")
+
+      //cfd and md interleaved:
+
+      var tps_cfdMd = 0
+      var fps_cfdMd = 0
+      var fns_cfdMd = 0
+      for (cm <- cfdAndMd) {
+        val attrId = cm._1
+        val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
+        val foundElents: List[IDTuple] = cm._2
+
+        val (tp, fp, fn) = computeFMeasure(foundElents, goldStandard)
+        tps_cfdMd += tp
+        fps_cfdMd += fp
+        fns_cfdMd += fn
+      }
+
+      val precision_cfdMd = tps_cfdMd.toDouble / (tps_cfdMd.toDouble + fps_cfdMd.toDouble)
+      val recall_cfdMd = tps_cfdMd.toDouble / (tps_cfdMd.toDouble + fns_cfdMd.toDouble)
+
+      println(s" data size = $j; noise = $i%; task= cfd & md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd")
 
     }
 
   }
 
-  private def computeFMeasure(input: List[(AttrAtom, AttrAtom)], goldStandard: List[Int]) = {
+  private def computeFMeasure(input: List[IDTuple], goldStandard: List[Int]): (Int, Int, Int) = {
     // (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
     // AttrAtom(id, value)
+
+    val tp = mutable.Set[Int]()
+    val fp = mutable.Set[Int]()
+
+    for (tuple <- input) {
+
+      val firstId = tuple.id1.toInt
+      val secondId = tuple.id2.toInt
+
+      val firstInGoldStandard: Boolean = goldStandard.contains(firstId)
+      val secondInGoldStandard: Boolean = goldStandard.contains(secondId)
+
+      (firstInGoldStandard, secondInGoldStandard) match {
+        case (true, true) => {
+          fp.add(firstId)
+          fp.add(secondId)
+        } //fp
+        case (true, false) => tp.add(firstId) // tp
+        case (false, true) => tp.add(secondId) //tp
+        case (false, false) => {
+          fp.add(firstId)
+          fp.add(secondId)
+        } // fp
+      }
+
+    }
+    val fn: Set[Int] = goldStandard.toSet.diff(tp)
+
+    //    val precision = tp.size.toDouble / (tp.size + fp.size).toDouble
+    //    val recall = tp.size.toDouble / (tp.size + fn.size).toDouble
+
+    // (precision, recall)
+    (tp.size, fp.size, fn.size)
+
+  }
+
+  private def computeFMeasureForAtoms(input: List[(AttrAtom, AttrAtom)], goldStandard: List[Int]): (Int, Int, Int) = {
+    // (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
+    // AttrAtom(id, value)
+
+    val tp = mutable.Set[Int]()
+    val fp = mutable.Set[Int]()
 
     for ((first, second) <- input) {
       val firstId: Int = first.id.toInt
@@ -130,12 +221,26 @@ class TPCHEvaluator() {
       val secondInGoldStandard: Boolean = goldStandard.contains(secondId)
 
       (firstInGoldStandard, secondInGoldStandard) match {
-        case (true, true) => //fp++
-        case (true, false) | (false, true) => // tp++
-        case (false, false) => //fp++
+        case (true, true) => {
+          fp.add(firstId)
+          fp.add(secondId)
+        } //fp
+        case (true, false) => tp.add(firstId) // tp
+        case (false, true) => tp.add(secondId) //tp
+        case (false, false) => {
+          fp.add(firstId)
+          fp.add(secondId)
+        } // fp
       }
 
     }
+    val fn: Set[Int] = goldStandard.toSet.diff(tp)
+
+    //    val precision = tp.size.toDouble / (tp.size + fp.size).toDouble
+    //    val recall = tp.size.toDouble / (tp.size + fn.size).toDouble
+
+    // (precision, recall)
+    (tp.size, fp.size, fn.size)
 
   }
 
