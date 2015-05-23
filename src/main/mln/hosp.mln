@@ -1,0 +1,97 @@
+//predicates declaration
+*providerNumberH(hid, number)
+*hospitalNameH(hid, name)
+*addressH(hid, address)
+*cityH(hid, city)
+*stateH(hid, state)
+*zipCodeH(hid, code)
+*countryNameH(hid, country)
+*phoneNumberH(hid, number)
+*conditionH(hid, condition)
+*measureCodeH(hid, measurecode)
+*measureNameH(hid, measurename)
+*scoreH(hid, score)
+
+*zipZ(zid, code)
+*stateZ(zid, state)
+
+//hidden predicates
+
+eqHospitalNameH(hid, name, hid, name)
+eqAddressH(hid, address, hid, address)
+eqCityH(hid, city, hid, city)
+eqStateH(hid, state, hid, state)
+eqZipCodeH(hid, code, hid, code)
+eqCountryNameH(hid, country, hid, country)
+eqPhoneNumberH(hid, number, hid, number)
+eqMeasureNameH(hid, measurename, hid, measurename)
+eqConditionH(hid, condition, hid, condition)
+
+shouldBeStateH(hid, state, state)
+
+newStateH(hid, state)
+newZipCode(hid, code)
+
+//formulas
+
+// cfd1:hosp ProviderNumber,|HospitalName,Address1,Address2,Address3,City,State,ZIPCode,CountyName,PhoneNumber,HospitalType,HospitalOwner,EmergencyService -,-,-,-,-,-,-,-,-,-,-,-,-
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !hospitalNameH(hid1, name1) v !hospitalNameH(hid2, name2) v hospitalNameH(hid2, name1) v hospitalNameH(hid1, name2) v eqHospitalNameH(hid1, name1, hid2, name2)
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !addressH(hid1, addr1) v !addressH(hid2, addr2) v addressH(hid1, addr2) v addressH(hid2, addr1) v eqAddressH(hid1, addr1, hid2, addr2)
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !cityH(hid1, city1) v !cityH(hid2, city2) v cityH(hid1, city2) v cityH(hid2, city1) v eqCityH(hid1, city1, hid2, city2)
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !stateH(hid1, state1) v !stateH(hid2, state2) v stateH(hid1, state2) v stateH(hid2, state1) v eqStateH(hid1, state1, hid2, state2)
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !zipCodeH(hid1, code1) v !zipCodeH(hid2, code2) v zipCodeH(hid1, code2) v zipCodeH(hid2, code1) v eqZipCodeH(hid1, code1, hid2, code2)
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !countryNameH(hid1, country1) v !countryNameH(hid2, country2) v countryNameH(hid1, country2) v countryNameH(hid2, country1) v eqCountryNameH(hid1, country1, hid2, country2)
+
+10.0 !providerNumberH(hid1, num) v !providerNumberH(hid2, num) v !phoneNumberH(hid1, number1) v !phoneNumberH(hid2, number2) v phoneNumberH(hid1, number2) v phoneNumberH(hid2, number1) v eqPhoneNumberH(hid1, number1, hid2, number2)
+
+
+// cfd2:hosp ZIPCode,|City,State -,-,-
+10.0 !zipCodeH(hid1, code) v !zipCodeH(hid2, code) v !cityH(hid1, city1) v !cityH(hid2, city2) v cityH(hid1, city2) v cityH(hid2, city1) v eqCityH(hid1, city1, hid2, city2)
+
+10.0 !zipCodeH(hid1, code) v !zipCodeH(hid2, code) v !stateH(hid1, state1) v !stateH(hid2, state2) v stateH(hid1, state2) v stateH(hid2, state1) v eqStateH(hid1, state1, hid2, state2)
+
+// cfd3:hosp PhoneNumber,|ZIPCode, City, State, Address1, -,-,-,-,-
+10.0 !phoneNumberH(hid1, num) v !phoneNumberH(hid2, num) v !zipCodeH(hid1, code1) v !zipCodeH(hid2, code2) v zipCodeH(hid1, code2) v zipCodeH(hid2, code1) v eqZipCodeH(hid1, code1, hid2, code2)
+
+10.0 !phoneNumberH(hid1, num) v !phoneNumberH(hid2, num) v !cityH(hid1, city1) v !cityH(hid2, city2) v cityH(hid1, city2) v cityH(hid2, city1) v eqCityH(hid1, city1, hid2, city2)
+
+10.0 !phoneNumberH(hid1, num) v !phoneNumberH(hid2, num) v !stateH(hid1, state1) v !stateH(hid2, state2) v stateH(hid1, state2) v stateH(hid2, state1) v eqStateH(hid1, state1, hid2, state2)
+
+10.0 !phoneNumberH(hid1, num) v !phoneNumberH(hid2, num) v !addressH(hid1, addr1) v !addressH(hid2, addr2) v addressH(hid1, addr2) v addressH(hid2, addr1) v eqAddressH(hid1, addr1, hid2, addr2)
+
+// cfd4:hosp MeasureCode,|MeasureName,Condition -,-,-
+10.0 !measureCodeH(hid1, mc) v !measureCodeH(hid2, mc) v !measureNameH(hid1, measurename1) v !measureNameH(hid2, measurename2) v measureNameH(hid1, measurename2) v measureNameH(hid2, measurename1) v eqMeasureNameH(hid1, measurename1, hid2, measurename2)
+
+10.0 !measureCodeH(hid1, mc) v !measureCodeH(hid2, mc) v !conditionH(hid1, condition1) v !conditionH(hid2, condition2) v conditionH(hid1, condition2) v conditionH(hid2, condition1) v eqConditionH(hid1, condition1, hid2, condition2)
+
+// md1:hosp,zipcode (ZIPCode) == (ZIPCode) (State) = (State)
+10.0 !zipCodeH(hid1, code) v !zipZ(zid, code) v !stateH(hid1, s1) v !stateZ(zid, s2) v stateH(hid1, s2) v stateZ(zid, s1) v shouldBeStateH(hid1, s1, s2)
+
+10.0 !zipCodeH(hid2, code) v !zipZ(zid, code) v !stateH(hid2, s1) v !stateZ(zid, s2) v stateH(hid2, s2) v stateZ(zid, s1) v shouldBeStateH(hid2, s1, s2)
+
+// using hidden predicates
+
+10.0 !eqZipCodeH(hid1, code1, hid2, code2) v !zipZ(zid, code1) v newZipCode(hid2, code1)
+
+10.0 !eqZipCodeH(hid1, code1, hid2, code2) v !zipZ(zid, code2) v newZipCode(hid1, code2)
+
+10.0 !newZipCode(hid2, code1) v !zipZ(zid, code1) v !stateH(hid1, s1) v !stateZ(zid, s2) v stateH(hid1, s2) v stateZ(zid, s1) v shouldBeStateH(hid1, s1, s2)
+
+10.0 !newZipCode(hid1, code2) v !zipZ(zid, code2) v !stateH(hid2, s1) v !stateZ(zid, s2) v stateH(hid2, s2) v stateZ(zid, s1) v shouldBeStateH(hid2, s1, s2)
+
+
+//shouldBeStateH(id, old-state1, new-state2)
+
+//eqStateH("7293", "CAtypo", "7305", "CA")
+//eqStateH("7305", "CA", "7293", "CAtypo")
+
+10.0 !shouldBeStateH(hid1, s1, s2) v !eqStateH(hid1, s1, hid2, s2) v newStateH(hid1, s2)
+
+10.0 !shouldBeStateH(hid2, s2, s1) v !eqStateH(hid1, s1, hid2, s2) v newStateH(hid2, s1)
+

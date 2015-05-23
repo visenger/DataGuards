@@ -1,0 +1,92 @@
+//observed predicates
+*custKey(id, key)
+*name(id, n)
+*addr(id, add)
+*natKey(id, natkey)
+*phone(id, ph)
+*acc(id, a)
+*mrkt(id, marketing)
+*orderKey(id, orderkey)
+//*orderStatus(id, status)
+//*totalPrice(id, price)
+//*orderDate(id, date)
+//*orderPriority(id, priority)
+//*clerk(id, clerk)
+
+// CFDs
+//custKey |name
+//custKey |addr
+//custKey |natKey
+//custKey |phone
+//custKey |acc
+//custKey |mrkt
+//addr | phone
+//name | phone
+//name | addr
+
+
+//hidden predicates
+
+eqNames(id, n, id, n)
+eqAddr(id, add, id, add)
+eqNatkey(id, natkey, id, natkey)
+eqPhone(id, ph, id, ph)
+eqAcc(id, a, id, a)
+eqMrkt(id, marketing, id, marketing)
+
+matchPhone(id, id)
+matchAddr(id, id)
+shouldMatchPhone(id, id)
+shouldMatchAddr(id, id)
+
+//CFDs
+10.0 !custKey(id1, key) v !custKey(id2, key) v !name(id1, n1) v !name(id2, n2) v name(id1, n2) v name(id2, n1) v eqNames(id1, n1, id2, n2)
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !addr(id1, a1) v !addr(id2, a2) v addr(id1, a2) v addr(id2, a1) v eqAddr(id1, a1, id2, a2)
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !natKey(id1, natkey1) v !natKey(id2, natkey2) v natKey(id1, natkey2) v natKey(id2, natkey1) v eqNatkey(id1, natkey1, id2, natkey2)
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v eqPhone(id1, ph1, id2, ph2)
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !acc(id1, a1) v !acc(id2, a2) v acc(id1, a2) v acc(id2, a1) v eqAcc(id1, a1, id2, a2)
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !mrkt(id1, m1) v !mrkt(id2, m2) v mrkt(id1, m2) v mrkt(id2, m1) v eqMrkt(id1, m1, id2, m2)
+
+//10.0 !addr(id1, a) v !addr(id2, a) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v eqPhone(id1, ph1, id2, ph2)
+
+10.0 !name(id1, n) v !name(id2, n) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v eqPhone(id1, ph1, id2, ph2)
+
+10.0 !name(id1, n) v !name(id2, n) v !addr(id1, a1) v !addr(id2, a2) v addr(id1, a2) v addr(id2, a1) v eqAddr(id1, a1, id2, a2)
+
+// MDs defined on one schema
+//addr | phone : for two similar addreses the phone numbers should be same
+//name | phone
+//name | addr : for two similar names the addreses should be same 
+
+10.0 !addr(id1, a) v !addr(id2, a) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v matchPhone(id1, id2)
+
+10.0 !name(id1, n) v !name(id2, n) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v matchPhone(id1, id2)
+
+10.0 !name(id1, n) v !name(id2, n) v !addr(id1, a1) v !addr(id2, a2) v addr(id1, a2) v addr(id2, a1) v matchAddr(id1, id2)
+
+
+//MDs and CFDs interleaved
+
+//addr | phone : for two similar addreses the phone numbers should be same
+
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !addr(id1, a) v !addr(id2, a) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v shouldMatchPhone(id1, id2)
+
+10.0 !eqAddr(id1, a1, id2, a2) v !matchPhone(id1, id2) v shouldMatchPhone(id1, id2)
+
+
+//name | phone
+
+10.0 !custKey(id1, key) v !custKey(id2, key) v !name(id1, n) v !name(id2, n) v !phone(id1, ph1) v !phone(id2, ph2) v phone(id1, ph2) v phone(id2, ph1) v shouldMatchPhone(id1, id2)
+
+10.0 !eqNames(id1, n1, id2, n2) v !matchPhone(id1, id2) v shouldMatchPhone(id1, id2)
+
+
+
+
+

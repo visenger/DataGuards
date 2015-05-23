@@ -76,7 +76,7 @@ class TPCHEvaluator() {
       //      println("md")
       //      md.foreach(println(_))
 
-      val cfdAndMd: Map[Int, List[IDTuple]] = for (g <- groupedByAttr; if g._1.startsWith("match")) yield {
+      val cfdAndMd: Map[Int, List[IDTuple]] = for (g <- groupedByAttr; if g._1.startsWith("should")) yield {
 
         val atoms = deduplicateArray(g._2)
         val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
@@ -120,7 +120,9 @@ class TPCHEvaluator() {
       }
       val precision_cfd = tps_cfd.toDouble / (tps_cfd.toDouble + fps_cfd.toDouble)
       val recall_cfd = tps_cfd.toDouble / (tps_cfd.toDouble + fns_cfd.toDouble)
-      println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd")
+
+      val f1_cfd = (2 * precision_cfd * recall_cfd) / (precision_cfd + recall_cfd)
+      println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
 
       //md:
       var tps_md = 0
@@ -140,7 +142,9 @@ class TPCHEvaluator() {
       val precision_md = tps_md.toDouble / (tps_md.toDouble + fps_md.toDouble)
       val recall_md = tps_md.toDouble / (tps_md.toDouble + fns_md.toDouble)
 
-      println(s" data size = $j; noise = $i%; task= md only;  precision= $precision_md; recall= $recall_md")
+      val f1_md = (2 * precision_md * recall_md) / (precision_md + recall_md)
+
+      println(s" data size = $j; noise = $i%; task= md only;  precision= $precision_md; recall= $recall_md; F1 = $f1_md")
 
       //cfd and md interleaved:
 
@@ -161,7 +165,9 @@ class TPCHEvaluator() {
       val precision_cfdMd = tps_cfdMd.toDouble / (tps_cfdMd.toDouble + fps_cfdMd.toDouble)
       val recall_cfdMd = tps_cfdMd.toDouble / (tps_cfdMd.toDouble + fns_cfdMd.toDouble)
 
-      println(s" data size = $j; noise = $i%; task= cfd & md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd")
+      val f1_cfdMd = (2 * precision_cfdMd * recall_cfdMd) / (precision_cfdMd + recall_cfdMd)
+
+      println(s" data size = $j; noise = $i%; task= cfd & md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd; F1 = $f1_cfdMd")
 
     }
 
