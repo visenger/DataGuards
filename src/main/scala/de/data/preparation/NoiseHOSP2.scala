@@ -295,3 +295,80 @@ case class Hosp2Tuple(providerID: String,
 
 
 }
+
+/*Hosp2Tuple(
+1 providerID.toString.replace('"', ' ').trim,
+2 city.toString,
+3 state.toString,
+4 zipCode.toString,
+5 phoneNumber.toString,
+6 condition.toString,
+7 measureID.toString,
+9 measureName.toString,
+9 stateAvg.toString) */
+
+object NoiseHOSP2 {
+  def getIdxByAttrName(name: String): Int = {
+    //todo: hack! these are hidden predicates names
+    name match {
+      case "eqCityH" => 2
+      case "eqStateH" => 3
+      case "eqZipCodeH" => 4
+      case "eqPhoneNumberH" => 5
+      case "eqMeasureNameH" => 8
+      case "eqConditionH" => 6
+      case "shouldBeStateH" => 3
+
+      case "newStateH" => 3
+      case "newZipCode" => 4
+      case _ => Int.MinValue
+
+      /*eqHospitalNameH(hid, name, hid, name)
+eqAddressH(hid, address, hid, address)
+
+eqCityH(hid, city, hid, city) 2
+eqStateH(hid, state, hid, state) 3
+eqZipCodeH(hid, code, hid, code) 4
+eqCountryNameH(hid, country, hid, country)
+eqPhoneNumberH(hid, number, hid, number) 5
+eqMeasureNameH(hid, measurename, hid, measurename) 8
+eqConditionH(hid, condition, hid, condition) 6
+
+shouldBeStateH(hid, state, state)
+
+newStateH(hid, state)
+newZipCode(hid, code)*/
+
+      /* case 2 => makeNoisycity(noise)
+    case 3 => makeNoisystate(noise)
+    case 4 => makeNoisyzipCode(noise)
+    case 5 => makeNoisyphoneNumber(noise)
+    case 6 => makeNoisycondition(noise)
+    case 7 => makeNoisymeasureID(noise)
+    case 8 => makeNoisymeasureName(noise)
+    case 9 => makeNoisystateAvg(noise)
+
+
+providerNumberH("830", "10164")
+
+cityH("830", "SYLACAUGA") 2
+stateH("830", "AL") 3
+zipCodeH("830", "35150") 4
+phoneNumberH("830", "2562495000") 5
+conditionH("830", "Heart Attack") 6
+measureCodeH("830", "AMI-2") 7
+measureNameH("830", "Heart Attack Patients Given Aspirin at Discharge") 8
+stateAvgH("830", "AL_AMI-2") 9
+*/
+
+    }
+  }
+
+  def getAllAttributeIdxs(): List[Int] = {
+
+    val attrCount = ConfigFactory.load().getInt("data.hosp2.attrCount")
+
+    val attrsIdx = (2 to attrCount).toList
+    attrsIdx
+  }
+}

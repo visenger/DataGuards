@@ -17,7 +17,7 @@ import scala.io.Source
 class PredicatesGrouper(dirName: String, fileName: String) {
 
 
-  def runGrouper () = {
+  def runGrouper() = {
     for (i <- 2 to 2 if i % 2 == 0) {
 
       val outputLines: List[String] = Source.fromFile(s"$dirName/$i/$fileName-$i.db").getLines().toList
@@ -220,6 +220,14 @@ case class AttrAtom(id: String, value: String) {
     case _ => false
   }
 }
+
+/*
+shouldBeStateH(hid, state, state)*/
+case class AttrAtom3(id: String, oldValue: String, newValue: String)
+
+/*newStateH(hid, state)*/
+case class TupleIdValue(id: String, value: String)
+
 
 case class IDTuple(id1: String, id2: String) {
 

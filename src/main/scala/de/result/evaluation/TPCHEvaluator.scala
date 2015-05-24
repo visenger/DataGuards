@@ -2,6 +2,7 @@ package de.result.evaluation
 
 import com.typesafe.config.{ConfigFactory, Config}
 import de.data.preparation.TPCHTuple
+import de.util.StringUtil
 
 import scala.collection.immutable.Iterable
 import scala.collection.mutable
@@ -44,6 +45,8 @@ class TPCHEvaluator() {
 
   val dataSetSizes = Array(500 /*, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000*/)
 
+  
+
   def runEvaluation: Unit = {
 
     for {i <- 2 to 2
@@ -51,7 +54,7 @@ class TPCHEvaluator() {
          if i % 2 == 0} {
 
       val lines: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/output-tpch-dataSize-$j-noise-$i.db").getLines().toList
-      // todo: group by name
+
 
       val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
 
@@ -91,11 +94,11 @@ class TPCHEvaluator() {
       val noiseDictionary: Map[Int, List[Int]] = logs.map(l => {
         val parts: Array[String] = l.split("\\t")
         val lineId: Int = parts.head.trim.toInt
-        val attrIds: List[Int] = convertToInt(parts.tail.toList)
+        val attrIds: List[Int] = StringUtil.convertToInt(parts.tail.toList)
         (lineId, attrIds)
       }).toMap
 
-      val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLinesDictionary(noiseDictionary)
+      val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLinesDictionary(noiseDictionary, TPCHTuple.getAllAttributeIdxs())
 
       //println("attrToLineTuples = " + attrToLineTuples)
 
@@ -118,8 +121,8 @@ class TPCHEvaluator() {
         fps_cfd += fp
         fns_cfd += fn
       }
-      val precision_cfd = tps_cfd.toDouble / (tps_cfd.toDouble + fps_cfd.toDouble)
-      val recall_cfd = tps_cfd.toDouble / (tps_cfd.toDouble + fns_cfd.toDouble)
+      val precision_cfd = calculate(tps_cfd, fps_cfd) 
+      val recall_cfd = calculate(tps_cfd, fns_cfd) 
 
       val f1_cfd = (2 * precision_cfd * recall_cfd) / (precision_cfd + recall_cfd)
       println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
@@ -139,8 +142,8 @@ class TPCHEvaluator() {
         fns_md += fn
       }
 
-      val precision_md = tps_md.toDouble / (tps_md.toDouble + fps_md.toDouble)
-      val recall_md = tps_md.toDouble / (tps_md.toDouble + fns_md.toDouble)
+      val precision_md = calculate(tps_md, fps_md)
+      val recall_md = calculate(tps_md, fns_md)
 
       val f1_md = (2 * precision_md * recall_md) / (precision_md + recall_md)
 
@@ -162,8 +165,8 @@ class TPCHEvaluator() {
         fns_cfdMd += fn
       }
 
-      val precision_cfdMd = tps_cfdMd.toDouble / (tps_cfdMd.toDouble + fps_cfdMd.toDouble)
-      val recall_cfdMd = tps_cfdMd.toDouble / (tps_cfdMd.toDouble + fns_cfdMd.toDouble)
+      val precision_cfdMd = calculate(tps_cfdMd, fps_cfdMd)
+      val recall_cfdMd = calculate(tps_cfdMd, fns_cfdMd)
 
       val f1_cfdMd = (2 * precision_cfdMd * recall_cfdMd) / (precision_cfdMd + recall_cfdMd)
 
@@ -172,6 +175,8 @@ class TPCHEvaluator() {
     }
 
   }
+
+  def calculate(first: Int, second: Int) = first.toDouble / (first.toDouble + second.toDouble)
 
   private def computeFMeasure(input: List[IDTuple], goldStandard: List[Int]): (Int, Int, Int) = {
     // (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
@@ -241,19 +246,14 @@ class TPCHEvaluator() {
 
     }
     val fn: Set[Int] = goldStandard.toSet.diff(tp)
-
-    //    val precision = tp.size.toDouble / (tp.size + fp.size).toDouble
-    //    val recall = tp.size.toDouble / (tp.size + fn.size).toDouble
-
-    // (precision, recall)
     (tp.size, fp.size, fn.size)
 
   }
 
 
-  private def generateAttrToLinesDictionary(noiseDictionary: Map[Int, List[Int]]): Map[Int, List[Int]] = {
+  private def generateAttrToLinesDictionary(noiseDictionary: Map[Int, List[Int]], idxs: List[Int]): Map[Int, List[Int]] = {
 
-    val attrToLineTuples: List[(Int, List[Int])] = for {attr <- TPCHTuple.getAllAttributeIdxs()} yield {
+    val attrToLineTuples: List[(Int, List[Int])] = for {attr <- idxs} yield {
 
       val linesForAttr: Iterable[Int] = for {noise <- noiseDictionary;
                                              if noise._2.contains(attr)} yield noise._1
@@ -264,9 +264,7 @@ class TPCHEvaluator() {
     attrToLineTuples.toMap
   }
 
-  def convertToInt(l: List[String]): List[Int] = {
-    l.map(_.trim.toInt)
-  }
+
 
   private def deduplicateTuples(attrLines: List[String]): List[(AttrAtom, AttrAtom)] = {
 
