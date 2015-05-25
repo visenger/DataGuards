@@ -223,10 +223,20 @@ case class AttrAtom(id: String, value: String) {
 
 /*
 shouldBeStateH(hid, state, state)*/
-case class AttrAtom3(id: String, oldValue: String, newValue: String)
+case class AttrAtom3(id: String, oldValue: String, newValue: String) {
+  override def equals(other: scala.Any): Boolean = other match {
+    case AttrAtom3(oId, oOldValue, oNewValue) => oId == id && oOldValue == oldValue && oNewValue == newValue
+    case _ => false
+  }
+}
 
 /*newStateH(hid, state)*/
-case class TupleIdValue(id: String, value: String)
+case class TupleIdValue(id: String, value: String) {
+  override def equals(other: scala.Any): Boolean = other match {
+    case TupleIdValue(oId, oValue) => oId == id && oValue == value
+    case _ => false
+  }
+}
 
 
 case class IDTuple(id1: String, id2: String) {

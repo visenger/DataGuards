@@ -53,74 +53,179 @@ class HOSP2Evaluator() {
 
   def runEvaluator(): Unit = {
 
-
     for {i <- 2 to 2
          j <- dataSetSizes
          if i % 2 == 0} {
 
-      val lines = Source.fromFile(s"$resultFolder/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
-
-
-      val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
-
-      val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = for (x <- groupedByAttr; if x._1.startsWith("eq")) yield {
-        val tuples: List[(AttrAtom, AttrAtom)] = deduplicateTuples(x._2)
-        val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
-        (attrId, tuples)
-      }
-
-      val md: Map[Int, List[AttrAtom3]] = for (x <- groupedByAttr; if x._1.startsWith("should")) yield {
-        val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
-        val atoms = generateAttrAtoms3(x._2)
-        (attrId, atoms)
-      }
-
-      val cfdMd: Map[Int, List[TupleIdValue]] = for (x <- groupedByAttr; if x._1.startsWith("new")) yield {
-        val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
-        val atoms = generateTupleIdValues(x._2)
-        (attrId, atoms)
-      }
-
       //noise logs
       val logs: List[String] = Source.fromFile(s"$resultFolder/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
-
-      val noiseDictionary: Map[Int, List[Int]] = logs.map(l => {
-        val strs: Array[String] = l.split("\\t")
-        val lineNr: Int = strs.head.toInt
-        val noisyAttrs: List[Int] = StringUtil.convertToInt(strs.tail.toList)
-        (lineNr, noisyAttrs)
-      }).toMap
-
+      val noiseDictionary: Map[Int, List[Int]] = getNoiseDict(logs)
       val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLineDictionary(noiseDictionary, NoiseHOSP2.getAllAttributeIdxs())
+      //attrToLineDictionary.foreach(n => println( s"""${n._1}  ${n._2.mkString(" ")}"""))
 
-      attrToLineDictionary.foreach(n => println( s"""${n._1}  ${n._2.mkString(" ")}"""))
-      // Start evaluation
+      val lines = Source.fromFile(s"$resultFolder/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+      val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
+
       //cfd:
-      var tps_cfd = 0
-      var fps_cfd = 0
-      var fns_cfd = 0
-      for (x <- cfd) {
-        val attrId = x._1
-
-        val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
-
-        val foundAtoms: List[(AttrAtom, AttrAtom)] = x._2
-
-        val (tp, fp, fn) = computeFMeasureForAtoms(foundAtoms, goldStandard)
-
-        tps_cfd += tp
-        fps_cfd += fp
-        fns_cfd += fn
-      }
-      val precision_cfd = calculate(tps_cfd, fps_cfd)
-      val recall_cfd = calculate(tps_cfd, fns_cfd)
-
-      val f1_cfd = (2 * precision_cfd * recall_cfd) / (precision_cfd + recall_cfd)
+      val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getCFDResults(groupedByAttr)
+      val (precision_cfd, recall_cfd, f1_cfd) = evaluateCFDs(cfd, attrToLineDictionary)
       println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
 
+      //md:
+      val md: Map[Int, List[AttrAtom3]] = getMDResults(groupedByAttr)
+      val (precision_md, recall_md, fMeasure_md) = evaluateMDs(md, attrToLineDictionary)
+      println(s" data size = $j; noise = $i%; task= md;  precision= $precision_md; recall= $recall_md; F1 = $fMeasure_md")
 
+      //md and cfd interleaved:
+      val cfdMd: Map[Int, List[TupleIdValue]] = getCFD_MDResults(groupedByAttr)
+      val (precision_cfdMd, recall_cfdMd, fMeasure_cfdMd) = evaluateCFD_MDResults(cfdMd, attrToLineDictionary)
+      println(s" data size = $j; noise = $i%; task= cfd and md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd; F1 = $fMeasure_cfdMd")
     }
 
+  }
+
+
+  private def evaluateCFDs(cfd: Map[Int, List[(AttrAtom, AttrAtom)]], attrToLineDictionary: Map[Int, List[Int]]): (Double, Double, Double) = {
+    var tps_cfd = 0
+    var fps_cfd = 0
+    var fns_cfd = 0
+    for (x <- cfd) {
+      val attrId = x._1
+
+      val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
+
+      val foundAtoms: List[(AttrAtom, AttrAtom)] = x._2
+
+      val (tp, fp, fn) = computeFMeasureForAtoms(foundAtoms, goldStandard)
+
+      tps_cfd += tp
+      fps_cfd += fp
+      fns_cfd += fn
+    }
+    val precision_cfd = calculate(tps_cfd, fps_cfd)
+    val recall_cfd = calculate(tps_cfd, fns_cfd)
+
+    val f1_cfd = computeFMeasure(precision_cfd, recall_cfd)
+    (precision_cfd, recall_cfd, f1_cfd)
+  }
+
+  private def evaluateMDs(md: Map[Int, List[AttrAtom3]], attrToLineDictionary: Map[Int, List[Int]]): (Double, Double, Double) = {
+    var tps_md = 0
+    var fps_md = 0
+    var fns_md = 0
+
+    for (x <- md) {
+      val attrId: Int = x._1
+      val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
+
+      val foundAtoms: List[AttrAtom3] = x._2
+
+      val (tp, fp, fn) = computeFMeasureForAtoms3(foundAtoms, goldStandard)
+      tps_md += tp
+      fps_md += fp
+      fns_md += fn
+    }
+
+    val precision_md = calculate(tps_md, fps_md)
+    val recall_md = calculate(tps_md, fns_md)
+    val fMeasure_md: Double = computeFMeasure(precision_md, recall_md)
+    (precision_md, recall_md, fMeasure_md)
+  }
+
+  private def evaluateCFD_MDResults(cfdMd: Map[Int, List[TupleIdValue]], attrToLineDictionary: Map[Int, List[Int]]): (Double, Double, Double) = {
+    var tps_cfdMd = 0
+    var fps_cfdMd = 0
+    var fns_cfdMd = 0
+
+    for (x <- cfdMd) {
+      val attrId: Int = x._1
+      val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
+      val foundAtoms: List[TupleIdValue] = x._2
+      val (tp, fp, fn) = computeFMeasureForTupleIdValues(foundAtoms, goldStandard)
+      tps_cfdMd += tp
+      fps_cfdMd += fp
+      fns_cfdMd += fn
+    }
+
+    val precision_cfdMd = calculate(tps_cfdMd, fps_cfdMd)
+    val recall_cfdMd = calculate(tps_cfdMd, fns_cfdMd)
+    val fMeasure_cfdMd = computeFMeasure(precision_cfdMd, recall_cfdMd)
+    (precision_cfdMd, recall_cfdMd, fMeasure_cfdMd)
+  }
+
+
+  private def getCFD_MDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[TupleIdValue]] = {
+    for (x <- groupedByAttr; if x._1.startsWith("new")) yield {
+      val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
+      val atoms = generateTupleIdValues(x._2)
+      (attrId, atoms)
+    }
+  }
+
+  private def getMDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[AttrAtom3]] = {
+    for (x <- groupedByAttr; if x._1.startsWith("should")) yield {
+      val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
+      val atoms = generateAttrAtoms3(x._2)
+      (attrId, atoms)
+    }
+  }
+
+  private def getCFDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[(AttrAtom, AttrAtom)]] = {
+    for (x <- groupedByAttr; if x._1.startsWith("eq")) yield {
+      val tuples: List[(AttrAtom, AttrAtom)] = deduplicateTuples(x._2)
+      val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
+      (attrId, tuples)
+    }
+  }
+
+  private def getNoiseDict(logs: List[String]): Map[Int, List[Int]] = {
+    val noiseDictionary: Map[Int, List[Int]] = logs.map(l => {
+      val strs: Array[String] = l.split("\\t")
+      val lineNr: Int = strs.head.toInt
+      val noisyAttrs: List[Int] = StringUtil.convertToInt(strs.tail.toList)
+      (lineNr, noisyAttrs)
+    }).toMap
+    noiseDictionary
+  }
+
+  def computeFMeasureForTupleIdValues(foundAtoms: List[TupleIdValue], goldStandard: List[Int]): (Int, Int, Int) = {
+
+    val tp = mutable.Set[Int]()
+    val fp = mutable.Set[Int]()
+
+    for (x <- foundAtoms) {
+      val attrId: Int = x.id.trim.toInt
+      val found: Boolean = goldStandard.contains(attrId)
+      found match {
+        case true => tp.add(attrId)
+        case false => fp.add(attrId)
+      }
+    }
+    val fn: Set[Int] = goldStandard.toSet.diff(tp)
+    (tp.size, fp.size, fn.size)
+  }
+
+  private def computeFMeasure(precision: Double, recall: Double): Double = {
+    (2 * precision * recall) / (precision + recall)
+  }
+
+  def computeFMeasureForAtoms3(foundAtoms: List[AttrAtom3], goldStandard: List[Int]): (Int, Int, Int) = {
+    val tp = mutable.Set[Int]()
+    val fp = mutable.Set[Int]()
+
+    for (atom <- foundAtoms) {
+      val id: Int = atom.id.trim.toInt
+      val found: Boolean = goldStandard.contains(id)
+
+      found match {
+        case true => tp.add(id)
+        case false => fp.add(id)
+      }
+    }
+
+    val fn: Set[Int] = goldStandard.toSet.diff(tp)
+
+    (tp.size, fp.size, fn.size)
   }
 
   def calculate(first: Int, second: Int) = first.toDouble / (first.toDouble + second.toDouble)

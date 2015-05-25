@@ -45,7 +45,6 @@ class TPCHEvaluator() {
 
   val dataSetSizes = Array(500 /*, 1000, 10000, 20000, 30000, 40000, 50000, 70000, 90000, 100000*/)
 
-  
 
   def runEvaluation: Unit = {
 
@@ -53,58 +52,20 @@ class TPCHEvaluator() {
          j <- dataSetSizes
          if i % 2 == 0} {
 
-      val lines: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/output-tpch-dataSize-$j-noise-$i.db").getLines().toList
-
-
-      val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
-
-
-      val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = for (g <- groupedByAttr; if g._1.startsWith("eq")) yield {
-
-        val atoms = deduplicateTuples(g._2)
-        val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
-        (attrId, atoms)
-      }
-      //      println("cfd")
-      //      cfd.foreach(println(_))
-
-
-      val md: Map[Int, List[IDTuple]] = for (g <- groupedByAttr; if g._1.startsWith("match")) yield {
-
-        val atoms = deduplicateArray(g._2)
-        val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
-        (attrId, atoms)
-      }
-
-      //      println("md")
-      //      md.foreach(println(_))
-
-      val cfdAndMd: Map[Int, List[IDTuple]] = for (g <- groupedByAttr; if g._1.startsWith("should")) yield {
-
-        val atoms = deduplicateArray(g._2)
-        val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
-        (attrId, atoms)
-      }
-
-      //      println("cfd and md")
-      //      cfdAndMd.foreach(println(_))
-
       val logs: List[String] = Source.fromFile(s"$resultFolder/$i/$j/log-dataSize-$j-noise-$i.tsv").getLines().toList
 
-      val noiseDictionary: Map[Int, List[Int]] = logs.map(l => {
-        val parts: Array[String] = l.split("\\t")
-        val lineId: Int = parts.head.trim.toInt
-        val attrIds: List[Int] = StringUtil.convertToInt(parts.tail.toList)
-        (lineId, attrIds)
-      }).toMap
+      val noiseDictionary: Map[Int, List[Int]] = getNoiseDict(logs)
 
       val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLinesDictionary(noiseDictionary, TPCHTuple.getAllAttributeIdxs())
 
-      //println("attrToLineTuples = " + attrToLineTuples)
+
+      val lines: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/output-tpch-dataSize-$j-noise-$i.db").getLines().toList
+      val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
 
       /* Start evaluation computation */
 
       //cfd:
+      val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getCFDResults(groupedByAttr)
       var tps_cfd = 0
       var fps_cfd = 0
       var fns_cfd = 0
@@ -121,13 +82,13 @@ class TPCHEvaluator() {
         fps_cfd += fp
         fns_cfd += fn
       }
-      val precision_cfd = calculate(tps_cfd, fps_cfd) 
-      val recall_cfd = calculate(tps_cfd, fns_cfd) 
-
+      val precision_cfd = calculate(tps_cfd, fps_cfd)
+      val recall_cfd = calculate(tps_cfd, fns_cfd)
       val f1_cfd = (2 * precision_cfd * recall_cfd) / (precision_cfd + recall_cfd)
       println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
 
       //md:
+      val md: Map[Int, List[IDTuple]] = getMDResults(groupedByAttr)
       var tps_md = 0
       var fps_md = 0
       var fns_md = 0
@@ -150,7 +111,7 @@ class TPCHEvaluator() {
       println(s" data size = $j; noise = $i%; task= md only;  precision= $precision_md; recall= $recall_md; F1 = $f1_md")
 
       //cfd and md interleaved:
-
+      val cfdAndMd: Map[Int, List[IDTuple]] = getCFD_MDResults(groupedByAttr)
       var tps_cfdMd = 0
       var fps_cfdMd = 0
       var fns_cfdMd = 0
@@ -174,6 +135,39 @@ class TPCHEvaluator() {
 
     }
 
+  }
+
+  private def getCFD_MDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[IDTuple]] = {
+    for (g <- groupedByAttr; if g._1.startsWith("should")) yield {
+      val atoms = deduplicateArray(g._2)
+      val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
+      (attrId, atoms)
+    }
+  }
+
+  private def getMDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[IDTuple]] = {
+    for (g <- groupedByAttr; if g._1.startsWith("match")) yield {
+      val atoms = deduplicateArray(g._2)
+      val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
+      (attrId, atoms)
+    }
+  }
+
+  private def getCFDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[(AttrAtom, AttrAtom)]] = {
+    for (g <- groupedByAttr; if g._1.startsWith("eq")) yield {
+      val atoms = deduplicateTuples(g._2)
+      val attrId: Int = TPCHTuple.getIdxByAttrName(g._1)
+      (attrId, atoms)
+    }
+  }
+
+  private def getNoiseDict(logs: List[String]): Map[Int, List[Int]] = {
+    logs.map(l => {
+      val parts: Array[String] = l.split("\\t")
+      val lineId: Int = parts.head.trim.toInt
+      val attrIds: List[Int] = StringUtil.convertToInt(parts.tail.toList)
+      (lineId, attrIds)
+    }).toMap
   }
 
   def calculate(first: Int, second: Int) = first.toDouble / (first.toDouble + second.toDouble)
@@ -263,7 +257,6 @@ class TPCHEvaluator() {
     }
     attrToLineTuples.toMap
   }
-
 
 
   private def deduplicateTuples(attrLines: List[String]): List[(AttrAtom, AttrAtom)] = {
