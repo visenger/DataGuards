@@ -1,12 +1,17 @@
 package de.result.evaluation
 
+import java.io.BufferedWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths, Path}
+
 import com.typesafe.config.{ConfigFactory, Config}
 import de.data.preparation.NoiseHOSP2
-import de.util.StringUtil
+import de.util.{Util, StringUtil}
 
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.{IndexedSeq, Iterable}
 import scala.collection.mutable
 import scala.io.Source
+import scala.util.matching.Regex
 
 /**
  * Created by visenger on 23/05/15.
@@ -48,14 +53,16 @@ class HOSP2Evaluator() {
 
   val config: Config = ConfigFactory.load()
   val resultFolder: String = config.getString("data.hosp2.resultFolder")
-  val dataSetSizes = Array(1 /*, 10, 20, 30, 40, 80, 90, 100*/)
+  val evaluaitonFolder = config.getString("data.hosp2.evalFolder")
+  val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+  //val dataSetSizes = Array(10 /*, 10, 20, 30, 40, 80, 90, 100*/)
 
 
   def runEvaluator(): Unit = {
-
-    for {i <- 2 to 2
-         j <- dataSetSizes
-         if i % 2 == 0} {
+    import Util._
+    val evalResults: IndexedSeq[String] = for {i <- 2 to 10
+                                               j <- dataSetSizes
+                                               if i % 2 == 0} yield {
 
       //noise logs
       val logs: List[String] = Source.fromFile(s"$resultFolder/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
@@ -69,21 +76,152 @@ class HOSP2Evaluator() {
       //cfd:
       val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getCFDResults(groupedByAttr)
       val (precision_cfd, recall_cfd, f1_cfd) = evaluateCFDs(cfd, attrToLineDictionary)
-      println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
+      //println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
 
       //md:
       val md: Map[Int, List[AttrAtom3]] = getMDResults(groupedByAttr)
       val (precision_md, recall_md, fMeasure_md) = evaluateMDs(md, attrToLineDictionary)
-      println(s" data size = $j; noise = $i%; task= md;  precision= $precision_md; recall= $recall_md; F1 = $fMeasure_md")
+      //println(s" data size = $j; noise = $i%; task= md;  precision= $precision_md; recall= $recall_md; F1 = $fMeasure_md")
 
       //md and cfd interleaved:
       val cfdMd: Map[Int, List[TupleIdValue]] = getCFD_MDResults(groupedByAttr)
       val (precision_cfdMd, recall_cfdMd, fMeasure_cfdMd) = evaluateCFD_MDResults(cfdMd, attrToLineDictionary)
-      println(s" data size = $j; noise = $i%; task= cfd and md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd; F1 = $fMeasure_cfdMd")
+      //println(s" data size = $j; noise = $i%; task= cfd and md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd; F1 = $fMeasure_cfdMd")
+
+      // time execution:
+      val resultsLog: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+      val runtime: Double = getTimeInSeconds(resultsLog)
+
+      println(s"$i&$j&${round(runtime)(4)}&${round(precision_cfd)(4)}&${round(recall_cfd)(4)}&${round(f1_cfd)(4)}&${round(precision_md)(4)}&${round(recall_md)(4)}&${round(fMeasure_md)(4)}&${round(precision_cfdMd)(4)}&${round(recall_cfdMd)(4)}&${round(fMeasure_cfdMd)(4)}")
+
+      val evalStr = s"$i\t$j\t${round(precision_cfd)(4)}\t${round(recall_cfd)(4)}\t${round(f1_cfd)(4)}\t${round(precision_md)(4)}\t${round(recall_md)(4)}\t${round(fMeasure_md)(4)}\t${round(precision_cfdMd)(4)}\t${round(recall_cfdMd)(4)}\t${round(fMeasure_cfdMd)(4)}\t${round(runtime)(4)}"
+      evalStr
     }
+    val header = s"%noi\tDATA SIZE\tCFD P\tCFD R\tCFD F1\tMD P\tMD R\tMD F1\tCFD+MD P\tCFD+MD R\tCFD+MD F1\tTIME"
+
+    //Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
 
   }
 
+  def generatePlots(): Unit = {
+    import Util._
+    for (j <- dataSetSizes) {
+
+      val path: Path = Paths.get(s"$evaluaitonFolder/evaluation-$j-datasize.tsv")
+      val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+
+      val header = s"NOISE\tCFDF1\tMDF1\tCFDMDF1\tTIME"
+      writer.write(s"$header\n")
+
+      for (i <- 2 to 10;
+           if i % 2 == 0) yield {
+
+        //noise logs
+        val logs: List[String] = Source.fromFile(s"$resultFolder/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
+        val noiseDictionary: Map[Int, List[Int]] = getNoiseDict(logs)
+        val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLineDictionary(noiseDictionary, NoiseHOSP2.getAllAttributeIdxs())
+        //attrToLineDictionary.foreach(n => println( s"""${n._1}  ${n._2.mkString(" ")}"""))
+
+        val lines = Source.fromFile(s"$resultFolder/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+        val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
+
+        //cfd:
+        val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getCFDResults(groupedByAttr)
+        val (precision_cfd, recall_cfd, f1_cfd) = evaluateCFDs(cfd, attrToLineDictionary)
+        //println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
+
+        //md:
+        val md: Map[Int, List[AttrAtom3]] = getMDResults(groupedByAttr)
+        val (precision_md, recall_md, fMeasure_md) = evaluateMDs(md, attrToLineDictionary)
+        //println(s" data size = $j; noise = $i%; task= md;  precision= $precision_md; recall= $recall_md; F1 = $fMeasure_md")
+
+        //md and cfd interleaved:
+        val cfdMd: Map[Int, List[TupleIdValue]] = getCFD_MDResults(groupedByAttr)
+        val (precision_cfdMd, recall_cfdMd, fMeasure_cfdMd) = evaluateCFD_MDResults(cfdMd, attrToLineDictionary)
+        //println(s" data size = $j; noise = $i%; task= cfd and md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd; F1 = $fMeasure_cfdMd")
+
+        // time execution:
+        val resultsLog: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+        val runtime: Double = getTimeInSeconds(resultsLog)
+
+        val line = s"$i\t${round(f1_cfd)(4)}\t${round(fMeasure_md)(4)}\t${round(fMeasure_cfdMd)(4)}\t${round(runtime)(4)}"
+
+        writer.write(s"$line\n")
+      }
+      writer.close()
+
+    }
+
+
+    //Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
+
+  }
+
+  def generatePlots2(): Unit = {
+    import Util._
+    for (i <- 2 to 10;
+         if i % 2 == 0) {
+
+      val path: Path = Paths.get(s"$evaluaitonFolder/evaluation-$i-noise.tsv")
+      val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+
+      val header = s"DATASIZE\tCFDF1\tMDF1\tCFDMDF1\tTIME"
+      writer.write(s"$header\n")
+
+      for (j <- dataSetSizes) yield {
+
+        //noise logs
+        val logs: List[String] = Source.fromFile(s"$resultFolder/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
+        val noiseDictionary: Map[Int, List[Int]] = getNoiseDict(logs)
+        val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLineDictionary(noiseDictionary, NoiseHOSP2.getAllAttributeIdxs())
+        //attrToLineDictionary.foreach(n => println( s"""${n._1}  ${n._2.mkString(" ")}"""))
+
+        val lines = Source.fromFile(s"$resultFolder/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+        val groupedByAttr: Map[String, List[String]] = lines.groupBy(e => e.takeWhile(_ != '('))
+
+        //cfd:
+        val cfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getCFDResults(groupedByAttr)
+        val (precision_cfd, recall_cfd, f1_cfd) = evaluateCFDs(cfd, attrToLineDictionary)
+        //println(s" data size = $j; noise = $i%; task= cfd only;  precision= $precision_cfd; recall= $recall_cfd; F1 = $f1_cfd")
+
+        //md:
+        val md: Map[Int, List[AttrAtom3]] = getMDResults(groupedByAttr)
+        val (precision_md, recall_md, fMeasure_md) = evaluateMDs(md, attrToLineDictionary)
+        //println(s" data size = $j; noise = $i%; task= md;  precision= $precision_md; recall= $recall_md; F1 = $fMeasure_md")
+
+        //md and cfd interleaved:
+        val cfdMd: Map[Int, List[TupleIdValue]] = getCFD_MDResults(groupedByAttr)
+        val (precision_cfdMd, recall_cfdMd, fMeasure_cfdMd) = evaluateCFD_MDResults(cfdMd, attrToLineDictionary)
+        //println(s" data size = $j; noise = $i%; task= cfd and md interleaved;  precision= $precision_cfdMd; recall= $recall_cfdMd; F1 = $fMeasure_cfdMd")
+
+        // time execution:
+        val resultsLog: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+        val runtime: Double = getTimeInSeconds(resultsLog)
+
+        val line = s"$j\t${round(f1_cfd)(4)}\t${round(fMeasure_md)(4)}\t${round(fMeasure_cfdMd)(4)}\t${round(runtime)(4)}"
+
+        writer.write(s"$line\n")
+      }
+      writer.close()
+
+    }
+
+
+    //Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
+
+  }
+
+
+  private def getTimeInSeconds(resultsLog: List[String]): Double = {
+    val runtimeStr: String = resultsLog.filter(_.startsWith("running")).head
+
+    val pattern = ".+\\s+took\\s+(\\d+)\\s+milliseconds".r
+    val pattern(t) = runtimeStr
+
+    val time: Double = t.trim.toDouble
+    val seconds: Double = time / 1000.0
+    seconds
+  }
 
   private def evaluateCFDs(cfd: Map[Int, List[(AttrAtom, AttrAtom)]], attrToLineDictionary: Map[Int, List[Int]]): (Double, Double, Double) = {
     var tps_cfd = 0
@@ -310,5 +448,106 @@ class HOSP2Evaluator() {
 }
 
 object PlaygroundHOSP2Eval extends App {
-  new HOSP2Evaluator().runEvaluator()
+  //new HOSP2Evaluator().runEvaluator()
+  //new HOSP2Evaluator().generatePlots()
+  new HOSP2Evaluator().generatePlots2()
+}
+
+
+
+object PlotsDataSizeConfigurationGenerator extends App {
+
+  //NOISE	CFDF1	MDF1	CFDMDF1	TIME
+
+  val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+
+  val plotsForDataSize: Array[String] = for (i <- dataSetSizes) yield {
+    val plotConfig = s"""{
+      "plot": {
+        "axis":"axis",
+        "title": "HOSP Data Cleaning for ${i}k",
+        "xlabel": "noise",
+        "ylabel": "F1",
+        "addplot": [
+          {
+            "table": "x=NOISE, y=CFDF1",
+            "data": "/Users/visenger/data/HOSP2/evaluation/evaluation-$i-datasize.tsv"
+          },
+          {
+            "table": "x=NOISE, y=MDF1",
+            "data": "/Users/visenger/data/HOSP2/evaluation/evaluation-$i-datasize.tsv"
+          },
+          {
+            "table": "x=NOISE, y=CFDMDF1",
+            "data": "/Users/visenger/data/HOSP2/evaluation/evaluation-$i-datasize.tsv"
+          }
+        ],
+        "legend": "$$cfd$$,$$md$$,$$cfd+md$$"
+      }
+    }"""
+    plotConfig
+  }
+  val start = s"""{
+  "plots": [
+    """
+  val sep =
+    s""",
+       |
+     """.stripMargin
+  val end = s"""]
+               |}
+     """.stripMargin
+  val plotsConfig: String = plotsForDataSize.mkString(start, sep, end)
+
+
+  print(plotsConfig)
+}
+
+object PlotsNoiseConfigGeneration extends App {
+
+  //DATASIZE	CFDF1	MDF1	CFDMDF1	TIME
+
+  val noise = Array(2, 4, 6, 8, 10)
+
+  val plotsForNoise: Array[String] = for (i <- noise) yield {
+    val plotConfig = s"""{
+      "plot": {
+        "axis":"axis",
+        "title": "HOSP Data Cleaning for noise ${i}%",
+        "xlabel": "data size in k",
+        "ylabel": "F1",
+        "addplot": [
+          {
+            "table": "x=DATASIZE, y=CFDF1",
+            "data": "/Users/visenger/data/HOSP2/evaluation/evaluation-$i-noise.tsv"
+          },
+          {
+            "table": "x=DATASIZE, y=MDF1",
+            "data": "/Users/visenger/data/HOSP2/evaluation/evaluation-$i-noise.tsv"
+          },
+          {
+            "table": "x=DATASIZE, y=CFDMDF1",
+            "data": "/Users/visenger/data/HOSP2/evaluation/evaluation-$i-noise.tsv"
+          }
+        ],
+        "legend": "$$cfd$$,$$md$$,$$cfd+md$$"
+      }
+    }"""
+    plotConfig
+  }
+  val start = s"""{
+  "plots": [
+    """
+  val sep =
+    s""",
+       |
+     """.stripMargin
+  val end = s"""]
+               |}
+     """.stripMargin
+  val plotsConfig: String = plotsForNoise.mkString(start, sep, end)
+
+
+  print(plotsConfig)
+
 }
