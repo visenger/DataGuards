@@ -5,6 +5,7 @@ import java.io.File
 import com.google.common.collect.Maps
 import com.typesafe.config.ConfigFactory
 import de.util.Util
+import de.util.Util._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
@@ -293,6 +294,19 @@ case class Hosp2Tuple(providerID: String,
      """.stripMargin
   }
 
+  val createAlchemyAtoms: (Int) => String = (idx) => {
+    s"""|providerNumberH($idx, ${normalizeAlchemyAtom(this.providerID)})
+|cityH($idx, ${normalizeAlchemyAtom(this.city)})
+|stateH($idx, ${normalizeAlchemyAtom(this.state)})
+|zipCodeH($idx, ${normalizeAlchemyAtom(this.zipCode)})
+|phoneNumberH($idx, ${normalizeAlchemyAtom(this.phoneNumber)})
+|conditionH($idx, ${normalizeAlchemyAtom(this.condition)})
+|measureCodeH($idx, ${normalizeAlchemyAtom(this.measureID)})
+|measureNameH($idx, ${normalizeAlchemyAtom(this.measureName)})
+"""
+      .stripMargin
+  }
+
 
 }
 
@@ -371,4 +385,30 @@ stateAvgH("830", "AL_AMI-2") 9
     val attrsIdx = (2 to attrCount).toList
     attrsIdx
   }
+}
+
+object AlchemyDBCreator extends App {
+
+  val config = ConfigFactory.load()
+  val cvsFile = "hosp-1-k.csv"
+
+  val hospRaw: Iterator[String] = Source.fromFile(s"${config.getString("data.hosp2.path")}/$cvsFile").getLines().drop(1).take(50)
+
+  val hosp2Tuples: Iterator[Hosp2Tuple] = hospRaw.map(line => {
+
+    val Array(providerID, _, _, _, _, city, state, zipCode, _, phoneNumber, _, _, _, condition, measureID, measureName, _, _, stateAvg) = line.split(',')
+
+    Hosp2Tuple(providerID.toString.replace('"', ' ').trim, city.toString, state.toString, zipCode.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, stateAvg.toString)
+  })
+
+  val indexedTuples: Map[Int, Hosp2Tuple] = hosp2Tuples.zipWithIndex.toMap.map(_.swap)
+
+  val hospPredicates: List[String] = indexedTuples.map(t => {
+    t._2.createAlchemyAtoms(t._1)
+  }).toList
+
+  val zipPredicates: List[String] = new ZipData().toAlchemyPredicates
+
+  writeToFile(hospPredicates:::zipPredicates, s"${config.getString("data.hosp2.alchemyFolder")}/hosp.db")
+
 }

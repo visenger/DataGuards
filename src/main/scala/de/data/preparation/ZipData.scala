@@ -27,4 +27,26 @@ class ZipData {
     zipPredicates.toList
   }
 
+  def toAlchemyPredicates: List[String]={
+    val zipFile = s"${config.getString("data.zip.path")}/zipcode.csv"
+    val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
+
+    val zipPredicates: Iterator[String] = for (z <- zipLines) yield {
+      val line = z._1
+      val idx = z._2
+      val Array(zip, state) = line.split(",")
+
+      state match {
+        case "AL" => { s"""zipZ($idx, $zip)
+                                            |stateZ($idx, $state)
+       """.stripMargin
+        }
+        case _ =>""
+      }
+    }
+    zipPredicates.toList
+
+
+  }
+
 }

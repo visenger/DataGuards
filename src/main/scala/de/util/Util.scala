@@ -113,6 +113,10 @@ object Util {
     _.replaceAll("\"", "_").replaceAll("\\(", "_").replaceAll("\\)", "_").replaceAll(",", "_")
   }
 
+  def normalizeAlchemyAtom: String => String ={
+    _.replaceAll("\\s+","_" ).replaceAll("\"", "_").replaceAll("\\(", "_").replaceAll("\\)", "_").replaceAll(",", "_").replaceAll("/","_").replaceAll("&","_").replaceAll("#","_").replaceAll(";","_").capitalize
+  }
+
   def playSound {
 
     import java.net.URL
