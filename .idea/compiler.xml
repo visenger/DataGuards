@@ -25,6 +25,8 @@
         <module name="DataGuards" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="DataGuards" target="1.5" />
+    </bytecodeTargetLevel>
   </component>
 </project>
-

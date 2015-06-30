@@ -3,9 +3,11 @@ package de.result.evaluation
 import java.io.BufferedWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths, Path}
+import javax.swing.InternalFrameFocusTraversalPolicy
 
 import com.typesafe.config.{ConfigFactory, Config}
 import de.data.preparation.NoiseHOSP2
+import de.util.Util._
 import de.util.{Util, StringUtil}
 
 import scala.collection.immutable.{IndexedSeq, Iterable}
@@ -54,8 +56,8 @@ class HOSP2Evaluator() {
   val config: Config = ConfigFactory.load()
   val resultFolder: String = config.getString("data.hosp2.resultFolder")
   val evaluaitonFolder = config.getString("data.hosp2.evalFolder")
-  val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
-  //val dataSetSizes = Array(10 /*, 10, 20, 30, 40, 80, 90, 100*/)
+  //val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+  val dataSetSizes = Array(80 /*, 40, 80, 90, 100*/)
 
 
   def runEvaluator(): Unit = {
@@ -448,11 +450,10 @@ class HOSP2Evaluator() {
 }
 
 object PlaygroundHOSP2Eval extends App {
-  //new HOSP2Evaluator().runEvaluator()
-  //new HOSP2Evaluator().generatePlots()
-  new HOSP2Evaluator().generatePlots2()
+  new HOSP2Evaluator().runEvaluator()
+  // new HOSP2Evaluator().generatePlots()
+  // new HOSP2Evaluator().generatePlots2()
 }
-
 
 
 object PlotsDataSizeConfigurationGenerator extends App {
@@ -550,4 +551,60 @@ object PlotsNoiseConfigGeneration extends App {
 
   print(plotsConfig)
 
+}
+
+case class EvaluationLine(noi: String, dataSize: String, runtime: String, cfdP: String, cfdR: String, cfdF1: String, mdP: String, mdR: String, mdF1: String, interP: String, interR: String, interF1: String)
+
+object DataForPlotsGenerator extends App {
+  val config = ConfigFactory.load()
+  val evaluaitonFolder = config.getString("data.hosp2.evalFolder")
+
+  generatePlots()
+
+  def generatePlots(): Unit = {
+    val lines: List[String] = Source.fromFile(s"$evaluaitonFolder/tmp.txt").getLines().toList
+    val evalResults: List[EvaluationLine] = lines.map(l => {
+      val Array(noi, dataSize, runtime, cfdP, cfdR, cfdF1, mdP, mdR, mdF1, interlP, interlR, interlF1) = l.split("&")
+      EvaluationLine(noi, dataSize, runtime, cfdP, cfdR, cfdF1, mdP, mdR, mdF1, interlP, interlR, interlF1)
+    })
+    val groupedByDataSize: Map[String, List[EvaluationLine]] = evalResults.groupBy(_.dataSize)
+
+    groupedByDataSize.foreach(t => {
+      val j = t._1.trim
+      val path: Path = Paths.get(s"$evaluaitonFolder/evaluation-$j-datasize.tsv")
+      val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+      val header = s"NOISE\tCFDF1\tMDF1\tCFDMDF1\tTIME"
+      writer.write(s"$header\n")
+
+      val evals: List[EvaluationLine] = t._2
+
+      evals.foreach(e => {
+        val line = s"${e.noi}\t${e.cfdF1}\t${e.mdF1}\t${e.interF1}\t${e.runtime}"
+        writer.write(s"$line\n")
+      })
+
+      writer.close()
+    })
+
+
+    val groupedByNoise: Map[String, List[EvaluationLine]] = evalResults.groupBy(_.noi)
+
+    groupedByNoise.foreach(t => {
+      val i = t._1.trim
+      val path: Path = Paths.get(s"$evaluaitonFolder/evaluation-$i-noise.tsv")
+      val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+
+      val header = s"DATASIZE\tCFDF1\tMDF1\tCFDMDF1\tTIME"
+      writer.write(s"$header\n")
+
+      val evals: List[EvaluationLine] = t._2
+      evals.foreach(e => {
+        val line = s"${e.dataSize}\t${e.cfdF1}\t${e.mdF1}\t${e.interF1}\t${e.runtime}"
+        writer.write(s"$line\n")
+      })
+
+      writer.close()
+    })
+
+  }
 }

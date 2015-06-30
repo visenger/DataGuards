@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_5" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/target/classes" />
     <output-test url="file://$MODULE_DIR$/target/test-classes" />
     <content url="file://$MODULE_DIR$">
@@ -14,6 +14,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="scala-sdk-2.10.3" level="application" />
     <orderEntry type="library" name="Maven: org.scalanlp:breeze-math_2.10:0.4" level="project" />
     <orderEntry type="library" name="Maven: org.scalanlp:breeze-core_2.10:0.4" level="project" />
     <orderEntry type="library" name="Maven: net.sf.opencsv:opencsv:2.3" level="project" />
@@ -126,6 +127,5 @@
     <orderEntry type="library" name="Maven: org.scala-lang:scala-compiler:2.10.4" level="project" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-reflect:2.10.4" level="project" />
     <orderEntry type="library" name="Maven: com.typesafe:config:1.2.1" level="project" />
-    <orderEntry type="library" name="scala-sdk-2.10.3" level="application" />
   </component>
 </module>

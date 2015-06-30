@@ -8,6 +8,7 @@
     <artifactId>guards</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+
     <properties>
         <java.verion>1.7</java.verion>
         <junit.version>4.11</junit.version>
@@ -141,6 +142,13 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
+                <!--solving  java.lang.OutOfMemoryError: GC overhead limit exceeded problem-->
+                <configuration>
+                    <jvmArgs>
+                        <jvmArg>-Xmx4g</jvmArg>
+                        <jvmArg>-Xms256m</jvmArg>
+                    </jvmArgs>
+                </configuration>
                 <executions>
                     <execution>
                         <id>scala-compile</id>
