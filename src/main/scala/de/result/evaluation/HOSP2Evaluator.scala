@@ -56,8 +56,25 @@ class HOSP2Evaluator() {
   val config: Config = ConfigFactory.load()
   val resultFolder: String = config.getString("data.hosp2.resultFolder")
   val evaluaitonFolder = config.getString("data.hosp2.evalFolder")
-  //val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
-  val dataSetSizes = Array(80 /*, 40, 80, 90, 100*/)
+  val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+  // val dataSetSizes = Array(80 /*, 40, 80, 90, 100*/)
+
+  def extractAndWriteRuntimesHOSP(): Unit = {
+    for {i <- 2 to 10
+         if i % 2 == 0} {
+      val path: Path = Paths.get(s"$evaluaitonFolder/runtime-$i-noise.tsv")
+      val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+
+      val header = s"DATASIZE\tTIME"
+      writer.write(s"$header\n")
+      for (j <- dataSetSizes) {
+        val resultsLog: List[String] = Source.fromFile(s"$resultFolder/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+        val runtime: Double = getTimeInSeconds(resultsLog)
+        writer.write(s"$j\t$runtime\n")
+      }
+      writer.close()
+    }
+  }
 
 
   def runEvaluator(): Unit = {
@@ -450,7 +467,8 @@ class HOSP2Evaluator() {
 }
 
 object PlaygroundHOSP2Eval extends App {
-  new HOSP2Evaluator().runEvaluator()
+  new HOSP2Evaluator().extractAndWriteRuntimesHOSP()
+  //new HOSP2Evaluator().runEvaluator()
   // new HOSP2Evaluator().generatePlots()
   // new HOSP2Evaluator().generatePlots2()
 }
@@ -460,7 +478,7 @@ object PlotsDataSizeConfigurationGenerator extends App {
 
   //NOISE	CFDF1	MDF1	CFDMDF1	TIME
 
-  val dataSetSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+  val dataSetSizes = Array(1, 10, 20, 30, 40 /*, 80, 90, 100*/)
 
   val plotsForDataSize: Array[String] = for (i <- dataSetSizes) yield {
     val plotConfig = s"""{
