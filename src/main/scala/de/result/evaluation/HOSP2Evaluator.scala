@@ -122,6 +122,71 @@ class HOSP2Evaluator() {
 
   }
 
+  def runEvaluatorExecutionOrderExperiments(): Unit = {
+    import Util._
+    val resultFolderMdCfd = config.getString("data.hosp2.resultFolderMdCfd")
+    val resultFolderCfdMd = config.getString("data.hosp2.resultFolderCfdMd")
+    val resultFolderJointly = config.getString("data.hosp2.resultFolderJointly")
+
+    val evalResults: IndexedSeq[String] = for {i <- 2 to 10
+                                               j <- dataSetSizes
+                                               if i % 2 == 0} yield {
+
+      //noise logs -> used by all
+      val logs: List[String] = Source.fromFile(s"$resultFolderMdCfd/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
+      val noiseDictionary: Map[Int, List[Int]] = getNoiseDict(logs)
+      val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLineDictionary(noiseDictionary, NoiseHOSP2.getAllAttributeIdxs())
+
+      // CFD -> MD
+      val linesCfdMd: List[String] = Source.fromFile(s"$resultFolderCfdMd/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+      val groupedByAttrCfdMd: Map[String, List[String]] = groupByPredicateName(linesCfdMd)
+
+      val cfdmd: Map[Int, List[AttrAtom3]] = getCFDMDResults(groupedByAttrCfdMd)
+      val (p_cfdmd, r_cfdmd, f1_cfdmd) = evaluateMDs(cfdmd, attrToLineDictionary)
+
+      // CFD->MD time execution:
+      val resultsLogCfdMd: List[String] = Source.fromFile(s"$resultFolderCfdMd/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+      val runtimeCfdMd: Double = getTimeInSeconds(resultsLogCfdMd)
+
+      /*++++++++++*/
+      // MD ->CFD
+      val linesMdCfd: List[String] = Source.fromFile(s"$resultFolderMdCfd/result/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+      val groupedByAttrMdCfd: Map[String, List[String]] = groupByPredicateName(linesMdCfd)
+
+      val mdcfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getMDCFDResults(groupedByAttrMdCfd)
+      val (p_mdcfd, r_mdcfd, f1_mdcfd) = evaluateCFDs(mdcfd, attrToLineDictionary)
+
+      // CFD->MD time execution:
+      val resultsLogMdCfd: List[String] = Source.fromFile(s"$resultFolderMdCfd/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+      val runtimeMdCfd: Double = getTimeInSeconds(resultsLogMdCfd)
+
+      /*++++++++++*/
+      // JOINTLY
+      val linesJointly: List[String] = Source.fromFile(s"$resultFolderJointly/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+      val groupedByAttrJointly: Map[String, List[String]] = groupByPredicateName(linesJointly)
+
+      val jointly: Map[Int, List[TupleIdValue]] = getJointlyResults(groupedByAttrJointly)
+      val (p_jointly, r_jointly, f1_jointly) = evaluateCFD_MDResults(jointly, attrToLineDictionary)
+
+      // JOINTLY time execution:
+      val resultsLogJointly: List[String] = Source.fromFile(s"$resultFolderJointly/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
+      val runtimeJointly: Double = getTimeInSeconds(resultsLogJointly)
+
+//      val evalStr = s"$i\t$j\t${round(precision_cfd)(4)}\t${round(recall_cfd)(4)}\t${round(f1_cfd)(4)}\t${round(precision_md)(4)}\t${round(recall_md)(4)}\t${round(fMeasure_md)(4)}\t${round(precision_cfdMd)(4)}\t${round(recall_cfdMd)(4)}\t${round(fMeasure_cfdMd)(4)}\t${round(runtime)(4)}"
+//      evalStr
+      "placeholder"
+    }
+    val header = s"%noi\tDATA SIZE\tCFD P\tCFD R\tCFD F1\tMD P\tMD R\tMD F1\tCFD+MD P\tCFD+MD R\tCFD+MD F1\tTIME"
+
+    //Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
+
+  }
+
+
+  private def groupByPredicateName(linesCfdMd: List[String]): Map[String, List[String]] = {
+    linesCfdMd.groupBy(e => e.takeWhile(_ != '('))
+  }
+
   def generatePlots(): Unit = {
     import Util._
     for (j <- dataSetSizes) {
@@ -319,11 +384,35 @@ class HOSP2Evaluator() {
     }
   }
 
+  private def getJointlyResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[TupleIdValue]] = {
+    for (x <- groupedByAttr; if x._1.startsWith("new")) yield {
+      val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
+      val atoms = generateTupleIdValues(x._2)
+      (attrId, atoms)
+    }
+  }
+
   private def getMDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[AttrAtom3]] = {
     for (x <- groupedByAttr; if x._1.startsWith("should")) yield {
       val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
       val atoms = generateAttrAtoms3(x._2)
       (attrId, atoms)
+    }
+  }
+
+  private def getCFDMDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[AttrAtom3]] = {
+    for (x <- groupedByAttr; if x._1.startsWith("joint")) yield {
+      val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
+      val atoms = generateAttrAtoms3(x._2)
+      (attrId, atoms)
+    }
+  }
+
+  private def getMDCFDResults(groupedByAttr: Map[String, List[String]]): Map[Int, List[(AttrAtom, AttrAtom)]] = {
+    for (x <- groupedByAttr; if x._1.startsWith("eq")) yield {
+      val tuples: List[(AttrAtom, AttrAtom)] = deduplicateTuples(x._2)
+      val attrId: Int = NoiseHOSP2.getIdxByAttrName(x._1)
+      (attrId, tuples)
     }
   }
 

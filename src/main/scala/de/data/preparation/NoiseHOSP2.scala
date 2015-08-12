@@ -335,6 +335,7 @@ object NoiseHOSP2 {
 
       case "newStateH" => 3
       case "newZipCode" => 4
+      case "jointStateH" => 3
       case _ => Int.MinValue
 
       /*eqHospitalNameH(hid, name, hid, name)
