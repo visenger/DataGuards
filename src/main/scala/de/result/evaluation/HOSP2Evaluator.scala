@@ -128,6 +128,8 @@ class HOSP2Evaluator() {
     val resultFolderCfdMd = config.getString("data.hosp2.resultFolderCfdMd")
     val resultFolderJointly = config.getString("data.hosp2.resultFolderJointly")
 
+    val header = s"%noi\tDATA SIZE\tCFD P\tCFD R\tCFD F1\tMD P\tMD R\tMD F1\tCFD+MD P\tCFD+MD R\tCFD+MD F1\tTIME"
+    println("header = " + header)
     val evalResults: IndexedSeq[String] = for {i <- 2 to 10
                                                j <- dataSetSizes
                                                if i % 2 == 0} yield {
@@ -138,7 +140,7 @@ class HOSP2Evaluator() {
       val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLineDictionary(noiseDictionary, NoiseHOSP2.getAllAttributeIdxs())
 
       // CFD -> MD
-      val linesCfdMd: List[String] = Source.fromFile(s"$resultFolderCfdMd/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+      val linesCfdMd: List[String] = Source.fromFile(s"$resultFolderCfdMd/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
       val groupedByAttrCfdMd: Map[String, List[String]] = groupByPredicateName(linesCfdMd)
 
       val cfdmd: Map[Int, List[AttrAtom3]] = getCFDMDResults(groupedByAttrCfdMd)
@@ -150,13 +152,13 @@ class HOSP2Evaluator() {
 
       /*++++++++++*/
       // MD ->CFD
-      val linesMdCfd: List[String] = Source.fromFile(s"$resultFolderMdCfd/result/output-data-hosp-$j-k-noise-$i.db").getLines().toList
+      val linesMdCfd: List[String] = Source.fromFile(s"$resultFolderMdCfd/$i/$j/results/output-data-hosp-$j-k-noise-$i.db").getLines().toList
       val groupedByAttrMdCfd: Map[String, List[String]] = groupByPredicateName(linesMdCfd)
 
       val mdcfd: Map[Int, List[(AttrAtom, AttrAtom)]] = getMDCFDResults(groupedByAttrMdCfd)
       val (p_mdcfd, r_mdcfd, f1_mdcfd) = evaluateCFDs(mdcfd, attrToLineDictionary)
 
-      // CFD->MD time execution:
+      // MD->CFD time execution:
       val resultsLogMdCfd: List[String] = Source.fromFile(s"$resultFolderMdCfd/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
       val runtimeMdCfd: Double = getTimeInSeconds(resultsLogMdCfd)
 
@@ -172,11 +174,11 @@ class HOSP2Evaluator() {
       val resultsLogJointly: List[String] = Source.fromFile(s"$resultFolderJointly/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
       val runtimeJointly: Double = getTimeInSeconds(resultsLogJointly)
 
-//      val evalStr = s"$i\t$j\t${round(precision_cfd)(4)}\t${round(recall_cfd)(4)}\t${round(f1_cfd)(4)}\t${round(precision_md)(4)}\t${round(recall_md)(4)}\t${round(fMeasure_md)(4)}\t${round(precision_cfdMd)(4)}\t${round(recall_cfdMd)(4)}\t${round(fMeasure_cfdMd)(4)}\t${round(runtime)(4)}"
-//      evalStr
+      val evalStr = s"$i\t$j #\t${round(p_cfdmd)(4)}\t${round(r_cfdmd)(4)}\t${round(f1_cfdmd)(4)}# \t${round(p_mdcfd)(4)}\t${round(r_mdcfd)(4)}\t${round(f1_mdcfd)(4)}#\t${round(p_jointly)(4)}\t${round(r_jointly)(4)}\t${round(f1_jointly)(4)}"
+      println("evalStr = " + evalStr)
       "placeholder"
     }
-    val header = s"%noi\tDATA SIZE\tCFD P\tCFD R\tCFD F1\tMD P\tMD R\tMD F1\tCFD+MD P\tCFD+MD R\tCFD+MD F1\tTIME"
+
 
     //Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
 
@@ -452,7 +454,11 @@ class HOSP2Evaluator() {
   }
 
   private def computeFMeasure(precision: Double, recall: Double): Double = {
-    (2 * precision * recall) / (precision + recall)
+    precision + recall match {
+      case 0.0 => 0.0
+      case _ => (2 * precision * recall) / (precision + recall)
+    }
+
   }
 
   def computeFMeasureForAtoms3(foundAtoms: List[AttrAtom3], goldStandard: List[Int]): (Int, Int, Int) = {
@@ -474,7 +480,13 @@ class HOSP2Evaluator() {
     (tp.size, fp.size, fn.size)
   }
 
-  def calculate(first: Int, second: Int) = first.toDouble / (first.toDouble + second.toDouble)
+  def calculate(first: Int, second: Int) = {
+    first.toDouble + second.toDouble match {
+      case 0.0 => 0.0
+      case _ => first.toDouble / (first.toDouble + second.toDouble)
+    }
+
+  }
 
   private def generateAttrToLineDictionary(lineToAttrs: Map[Int, List[Int]], attrs: List[Int]): Map[Int, List[Int]] = {
 
@@ -556,7 +568,8 @@ class HOSP2Evaluator() {
 }
 
 object PlaygroundHOSP2Eval extends App {
-  new HOSP2Evaluator().extractAndWriteRuntimesHOSP()
+  new HOSP2Evaluator().runEvaluatorExecutionOrderExperiments()
+  //new HOSP2Evaluator().extractAndWriteRuntimesHOSP()
   //new HOSP2Evaluator().runEvaluator()
   // new HOSP2Evaluator().generatePlots()
   // new HOSP2Evaluator().generatePlots2()
