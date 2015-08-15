@@ -127,12 +127,17 @@ class HOSP2Evaluator() {
     val resultFolderMdCfd = config.getString("data.hosp2.resultFolderMdCfd")
     val resultFolderCfdMd = config.getString("data.hosp2.resultFolderCfdMd")
     val resultFolderJointly = config.getString("data.hosp2.resultFolderJointly")
+    val evalFolderExecOrder = config.getString("data.hosp2.evalFolderExecOrder")
 
-    val header = s"%noi\tDATA SIZE\tCFD P\tCFD R\tCFD F1\tMD P\tMD R\tMD F1\tCFD+MD P\tCFD+MD R\tCFD+MD F1\tTIME"
-    println("header = " + header)
-    val evalResults: IndexedSeq[String] = for {i <- 2 to 10
-                                               j <- dataSetSizes
-                                               if i % 2 == 0} yield {
+    val header = s"%noi\tDATA SIZE\tCFD-MD P\tCFD-MD R\tCFD-MD F1\tRUNTIME CFD-MD\tMD-CFD P\tMD-CFD R\tMD-CFD F1\tRUNTIME MD-CFD\tJOINT-CFD+MD P\tJOINT-CFD+MD R\tJOINT-CFD+MD F1\tRUNTIME JOINT-CFD+MD"
+
+    val path: Path = Paths.get(s"$evalFolderExecOrder/evaluation-exec-order.tsv")
+    val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+    writer.write(s"$header\n")
+
+    for {i <- 2 to 10
+         j <- dataSetSizes
+         if i % 2 == 0} {
 
       //noise logs -> used by all
       val logs: List[String] = Source.fromFile(s"$resultFolderMdCfd/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
@@ -174,13 +179,12 @@ class HOSP2Evaluator() {
       val resultsLogJointly: List[String] = Source.fromFile(s"$resultFolderJointly/$i/$j/results/results-hosp-dataSize-$j-noise-$i.txt").getLines().toList
       val runtimeJointly: Double = getTimeInSeconds(resultsLogJointly)
 
-      val evalStr = s"$i\t$j #\t${round(p_cfdmd)(4)}\t${round(r_cfdmd)(4)}\t${round(f1_cfdmd)(4)}# \t${round(p_mdcfd)(4)}\t${round(r_mdcfd)(4)}\t${round(f1_mdcfd)(4)}#\t${round(p_jointly)(4)}\t${round(r_jointly)(4)}\t${round(f1_jointly)(4)}"
-      println("evalStr = " + evalStr)
-      "placeholder"
+      val evalStr = s"$i\t$j\t${round(p_cfdmd)(4)}\t${round(r_cfdmd)(4)}\t${round(f1_cfdmd)(4)}\t${round(runtimeCfdMd)(4)} \t${round(p_mdcfd)(4)}\t${round(r_mdcfd)(4)}\t${round(f1_mdcfd)(4)}\t${round(runtimeMdCfd)(4)}\t${round(p_jointly)(4)}\t${round(r_jointly)(4)}\t${round(f1_jointly)(4)}\t${round(runtimeJointly)(4)}"
+      writer.write(s"$evalStr\n")
     }
+    writer.close()
 
-
-    //Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
+    // Util.writeToFileWithHeader(header, evalResults.toList, s"$resultFolder/evaluation-hosp2.tsv")
 
   }
 
