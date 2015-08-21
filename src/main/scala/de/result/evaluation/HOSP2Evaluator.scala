@@ -317,19 +317,24 @@ class HOSP2Evaluator() {
     var tps_cfd = 0
     var fps_cfd = 0
     var fns_cfd = 0
-    for (x <- cfd) {
-      val attrId = x._1
+    for (x <- cfd) { //for each attribute in the result.
+      val attrId = x._1 //each attribute has its nummer e.g state -> 3
 
-      val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List())
+      val goldStandard: List[Int] = attrToLineDictionary.getOrElse(attrId, List()) // noise inserted previously
 
-      val foundAtoms: List[(AttrAtom, AttrAtom)] = x._2
+      val foundAtoms: List[(AttrAtom, AttrAtom)] = x._2 // the actual result of our method: set of values of the attribute x
 
-      val (tp, fp, fn) = computeFMeasureForAtoms(foundAtoms, goldStandard)
+      val (tp, fp, fn) = computeFMeasureForAtoms(foundAtoms, goldStandard) // now, we have two sets
+                                                                            // 1) foundAtoms: the errors, which are found by our method;
+                                                                            // 2) information about noise introduced previously: goldStandard
+
 
       tps_cfd += tp
       fps_cfd += fp
       fns_cfd += fn
     }
+
+    //see formula for Precision, Recall and F1 - below is the implementation;
     val precision_cfd = calculate(tps_cfd, fps_cfd)
     val recall_cfd = calculate(tps_cfd, fns_cfd)
 
@@ -536,7 +541,7 @@ class HOSP2Evaluator() {
   }
 
   private def computeFMeasureForAtoms(input: List[(AttrAtom, AttrAtom)], goldStandard: List[Int]): (Int, Int, Int) = {
-    // (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
+    //an example of the tuple: (AttrAtom(364,31-579-682-9907typo),AttrAtom(396,31-579-682-9907))
     // AttrAtom(id, value)
 
     val tp = mutable.Set[Int]()
