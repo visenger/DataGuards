@@ -1,6 +1,8 @@
 package de.data.preparation
 
-import java.io.File
+import java.io.{BufferedWriter, File}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths, Path}
 
 import com.google.common.collect.Maps
 import com.typesafe.config.ConfigFactory
@@ -213,6 +215,8 @@ class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val
 
 }
 
+case class NoiseLog(tupleid: Int, attrids: List[Int])
+
 case class Hosp2Tuple(providerID: String,
                       var city: String,
                       var state: String,
@@ -296,13 +300,13 @@ case class Hosp2Tuple(providerID: String,
 
   val createAlchemyAtoms: (Int) => String = (idx) => {
     s"""|providerNumberH($idx, ${normalizeAlchemyAtom(this.providerID)})
-|cityH($idx, ${normalizeAlchemyAtom(this.city)})
-|stateH($idx, ${normalizeAlchemyAtom(this.state)})
-|zipCodeH($idx, ${normalizeAlchemyAtom(this.zipCode)})
-|phoneNumberH($idx, ${normalizeAlchemyAtom(this.phoneNumber)})
-|conditionH($idx, ${normalizeAlchemyAtom(this.condition)})
-|measureCodeH($idx, ${normalizeAlchemyAtom(this.measureID)})
-|measureNameH($idx, ${normalizeAlchemyAtom(this.measureName)})
+                                                                         |cityH($idx, ${normalizeAlchemyAtom(this.city)})
+                                                                                                                          |stateH($idx, ${normalizeAlchemyAtom(this.state)})
+                                                                                                                                                                             |zipCodeH($idx, ${normalizeAlchemyAtom(this.zipCode)})
+                                                                                                                                                                                                                                    |phoneNumberH($idx, ${normalizeAlchemyAtom(this.phoneNumber)})
+                                                                                                                                                                                                                                                                                                   |conditionH($idx, ${normalizeAlchemyAtom(this.condition)})
+                                                                                                                                                                                                                                                                                                                                                              |measureCodeH($idx, ${normalizeAlchemyAtom(this.measureID)})
+                                                                                                                                                                                                                                                                                                                                                                                                                           |measureNameH($idx, ${normalizeAlchemyAtom(this.measureName)})
 """
       .stripMargin
   }
@@ -388,6 +392,82 @@ stateAvgH("830", "AL_AMI-2") 9
   }
 }
 
+object Hosp2RawNoiseInjector extends App {
+
+
+  injectToCSV()
+
+
+  def injectToCSV(): Unit = {
+    //get log file -> create list of all added noise
+    val config = ConfigFactory.load()
+    val noise = Array(2 , 4, 6, 8, 10)
+    val dataSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+    val logsDir = config.getString("log.path")
+    val hospInputDir = config.getString("data.hosp2.path")
+
+    for (j <- dataSizes) {
+      val input: List[String] = Source.fromFile(s"$hospInputDir/hosp-$j-k.csv").getLines().toList
+      val header: String = input.head
+      val hospRaw: List[String] = input.tail
+      val hospIndexed: Map[Int, String] = attachTupleIds(hospRaw)
+
+      for (i <- noise) {
+
+        val logStrings: List[String] = Source.fromFile(s"$logsDir/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
+        val noiseLogs: Map[Int, NoiseLog] = logStrings.map(l => {
+          val elements: Array[String] = l.split("\\t")
+          val tupleid = elements.head.toInt
+          val attrids: List[Int] = elements.tail.map(_.toInt).toList
+          tupleid -> NoiseLog(tupleid, attrids)
+        }).toMap
+
+        // add noise and write into the datafile
+
+        val path: Path = Paths.get(s"$logsDir/$i/$j/hosp-$j-k-noise-$i.csv")
+        val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+        writer.write(s"$header\n")
+        hospIndexed.foreach(h => {
+          val tupleid = h._1
+          val rawTuple = h._2
+
+          val modifiedRow: String = getRowToWrite(noiseLogs, tupleid, rawTuple)
+
+          writer.write(s"$modifiedRow\n")
+        })
+        writer.close()
+      }
+    }
+  }
+
+  private def getRowToWrite(noiseLogs: Map[Int, NoiseLog], tupleid: Int, rawTuple: String): String = {
+    noiseLogs.contains(tupleid) match {
+      case true => insertNoiseIntoRaw(rawTuple, noiseLogs.get(tupleid).get.attrids)
+      case false => rawTuple
+    }
+  }
+
+  def insertNoiseIntoRaw(input: String, attrs: List[Int]): String = {
+    val Array(providerID, attr1, attr2, attr3, attr4, city, state, zipCode, attr5, phoneNumber, attr6, attr7, attr8, condition, measureID, measureName, attr9, attr10, stateAvg) = input.split(',')
+
+    val tuple = Hosp2Tuple(providerID.toString.replace('"', ' ').trim, city.toString, state.toString, zipCode.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, stateAvg.toString)
+    val noisyTuple: Hosp2Tuple = tuple.insertNoise(attrs)
+
+    val noisyHospTuple: String = Array(noisyTuple.providerID, attr1, attr2, attr3, attr4,
+      noisyTuple.city, noisyTuple.state, noisyTuple.zipCode, attr5,
+      noisyTuple.phoneNumber, attr6, attr7, attr8, noisyTuple.condition,
+      noisyTuple.measureID, noisyTuple.measureName, attr9, attr10,
+      noisyTuple.stateAvg).mkString(",")
+
+    noisyHospTuple
+  }
+
+  def attachTupleIds(hospRaw: List[String]): Map[Int, String] = {
+    hospRaw.zipWithIndex.map(_.swap).toMap
+  }
+
+}
+
 object AlchemyDBCreator extends App {
 
   val config = ConfigFactory.load()
@@ -410,6 +490,6 @@ object AlchemyDBCreator extends App {
 
   val zipPredicates: List[String] = new ZipData().toAlchemyPredicates
 
-  writeToFile(hospPredicates:::zipPredicates, s"${config.getString("data.hosp2.alchemyFolder")}/hosp.db")
+  writeToFile(hospPredicates ::: zipPredicates, s"${config.getString("data.hosp2.alchemyFolder")}/hosp.db")
 
 }
