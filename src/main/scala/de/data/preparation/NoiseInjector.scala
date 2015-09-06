@@ -101,4 +101,7 @@ object PlaygroundForNoise extends App {
   }
 }
 
+object Test extends App{
+
+}
 

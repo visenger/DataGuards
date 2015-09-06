@@ -188,6 +188,63 @@ class HOSP2Evaluator() {
 
   }
 
+  def getNoiseStatistics = {
+    /*
+    * case 2 => makeNoisycity(noise)
+      case 3 => makeNoisystate(noise)
+      case 4 => makeNoisyzipCode(noise)
+      case 5 => makeNoisyphoneNumber(noise)
+      case 6 => makeNoisycondition(noise)
+      case 7 => makeNoisymeasureID(noise)
+      case 8 => makeNoisymeasureName(noise)
+      case 9 => makeNoisystateAvg(noise)
+      */
+
+    val noiseFolder=config.getString("log.path")
+
+    val path: Path = Paths.get(s"$noiseFolder/noise-statistics.tsv")
+    val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+
+    writer.write(s"size,noise,city,state,zipCode,phoneNumber,condition,measureID,measureName,stateAvg\n")
+
+    for {i <- 2 to 10
+         j <- dataSetSizes
+         if i % 2 == 0} {
+
+      //noise logs
+      val logs: List[String] = Source.fromFile(s"$noiseFolder/$i/$j/log-hosp-$j-k-noise-$i.tsv").getLines().toList
+      val noiseDictionary: Map[Int, List[Int]] = getNoiseDict(logs)
+      val attrToLineDictionary: Map[Int, List[Int]] = generateAttrToLineDictionary(noiseDictionary, NoiseHOSP2.getAllAttributeIdxs())
+
+      var city:Int=0
+      var state:Int=0
+      var zipCode:Int=0
+      var phoneNumber:Int=0
+      var condition:Int=0
+      var measureID:Int=0
+      var measureName:Int=0
+      var stateAvg:Int=0
+
+
+      attrToLineDictionary.foreach(a =>{
+        a._1 match{
+        case 2 => city+=a._2.size
+        case 3 => state+=a._2.size
+        case 4 => zipCode+=a._2.size
+        case 5 => phoneNumber+=a._2.size
+        case 6 => condition+=a._2.size
+        case 7 => measureID+=a._2.size
+        case 8 => measureName+=a._2.size
+        case 9 => stateAvg+=a._2.size}
+
+      })
+
+      writer.write(s"$j k,$i,$city,$state,$zipCode,$phoneNumber,$condition,$measureID,$measureName,$stateAvg\n")
+
+    }
+    writer.close()
+
+  }
 
   private def groupByPredicateName(linesCfdMd: List[String]): Map[String, List[String]] = {
     linesCfdMd.groupBy(e => e.takeWhile(_ != '('))
@@ -577,7 +634,8 @@ class HOSP2Evaluator() {
 }
 
 object PlaygroundHOSP2Eval extends App {
-  new HOSP2Evaluator().runEvaluatorExecutionOrderExperiments()
+  new HOSP2Evaluator().getNoiseStatistics
+  //new HOSP2Evaluator().runEvaluatorExecutionOrderExperiments()
   //new HOSP2Evaluator().extractAndWriteRuntimesHOSP()
   //new HOSP2Evaluator().runEvaluator()
   // new HOSP2Evaluator().generatePlots()
@@ -681,6 +739,8 @@ object PlotsNoiseConfigGeneration extends App {
   print(plotsConfig)
 
 }
+
+
 
 case class EvaluationLine(noi: String, dataSize: String, runtime: String, cfdP: String, cfdR: String, cfdF1: String, mdP: String, mdR: String, mdF1: String, interP: String, interR: String, interF1: String)
 

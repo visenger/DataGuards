@@ -493,3 +493,61 @@ object AlchemyDBCreator extends App {
   writeToFile(hospPredicates ::: zipPredicates, s"${config.getString("data.hosp2.alchemyFolder")}/hosp.db")
 
 }
+
+object DCRulesGenerator extends App{
+
+  val config=ConfigFactory.load()
+  val noise = Array(2, 4, 6, 8, 10)
+  val dataSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
+  val logsDir = config.getString("log.path")
+
+  for(i<-noise; j<-dataSizes){
+    val template=
+      s"""|{
+         |    "source" : {
+         |        "type" : "csv",
+         |        "file" : ["./noiselogs/$i/$j/hosp_${j}_k_noise_$i.csv"]
+         |    },
+         |    "rule" : [
+         |        {
+         |			"name" : "FD1",
+         |            "type" : "fd",
+         |            "value" : ["ProviderNumber,|HospitalName,City,State,ZIPCode, CountryName ,PhoneNumber,HospitalType,HospitalOwner,EmergencyService"]
+         |        },
+         |        {
+         |			"name" : "FD2",
+         |            "type" : "fd",
+         |            "value" : ["ZIPCode,|City,State"]
+         |        },
+         |        {
+         |            "name" : "FD3",
+         |            "type" : "fd",
+         |            "value" : ["PhoneNumber,|ZIPCode, City, State"]
+         |        },
+         |        {
+         |            "name" : "FD4",
+         |            "type" : "fd",
+         |            "value" : ["MeasureCode,|MeasureName,Condition"]
+         |        },
+         |        {
+         |            "name" : "FD5",
+         |            "type" : "fd",
+         |            "value" : ["ProviderNumber,MeasureCode,|StateAvg"]
+         |        },
+         |        {
+         |            "name" : "FD6",
+         |            "type" : "fd",
+         |            "value" : ["State,MeasureCode,|StateAvg"]
+         |        }
+         |    ]
+         |}
+       """.stripMargin
+
+    val path: Path = Paths.get(s"$logsDir/$i/$j/dc-hosp-$j-k-noise-$i.json")
+    val writer: BufferedWriter = Files.newBufferedWriter(path, StandardCharsets.UTF_8)
+    writer.write(template)
+    writer.close()
+  }
+
+
+}
