@@ -13,53 +13,6 @@ import scala.collection.mutable.ListBuffer
  * Created by larysa  25.03.14
  */
 object Util {
-  //  def areSynonyms(arg1: String, arg2: String): Boolean = {
-  //    val synonyms: mutable.Map[ISynset, util.Set[String]] = WordnetDao.INSTANCE.getSynonymWords(arg1, false).asScala
-  //    val find: Boolean = synonyms.values.exists(_.contains(arg2))
-  //    find
-  //  }
-  //
-  //  def areVerbsSynonyms(arg1: String, arg2: String): Boolean = {
-  //    val synonyms: mutable.Map[ISynset, util.Set[String]] = WordnetDao.INSTANCE.getSynonymVerbs(arg1, true).asScala
-  //    val find: Boolean = synonyms.values.exists(_.contains(arg2))
-  //    find
-  //  }
-  //
-  //
-  //  def getAllSynonymsFor(word: String): List[(String, String)] = {
-  //    val synonyms: mutable.Map[ISynset, util.Set[String]] = WordnetDao.INSTANCE.getSynonymWords(word, false).asScala
-  //    val allSynonymPairs: mutable.Iterable[List[(String, String)]] = synonyms map (s => {
-  //      val synsets: List[String] = s._2.asScala.toList
-  //      val tuples: List[(String, String)] = for (synonym <- synsets; if (synonym != word)) yield {
-  //        (word, synonym)
-  //      }
-  //      tuples
-  //    })
-  //    allSynonymPairs.flatten.toSet.toList
-  //  }
-  //
-  //  def getSynonymsFor(word: String): List[String] = {
-  //    val synonyms: mutable.Map[ISynset, util.Set[String]] = WordnetDao.INSTANCE.getSynonymWords(word, false).asScala
-  //    val allSynonymPairs: mutable.Iterable[List[String]] = synonyms map (s => {
-  //      val synsets: List[String] = s._2.asScala.toList
-  //      val synonyms: List[String] = for (synonym <- synsets; if (synonym != word)) yield {
-  //        synonym
-  //      }
-  //      synonyms
-  //    })
-  //    allSynonymPairs.flatten.toList
-  //  }
-  //
-  //
-  //  def getAllSimilarNounsFor(word: String): mutable.Map[String, Float] = {
-  //    val nounSimilarityDb = SimilarityDatabase.getInstance("nounSimilarity")
-  //    val similar: mutable.Map[String, Float] = nounSimilarityDb.getSimilar(word).asScala
-  //    if (similar.contains(word)) {
-  //      similar.remove(word)
-  //    }
-  //    similar
-  //  }
-  //
 
   def writeToFile(db_atoms: List[String], fileName: String) {
     val path: Path = Paths.get(fileName)

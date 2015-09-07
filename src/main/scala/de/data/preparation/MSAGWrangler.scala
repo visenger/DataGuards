@@ -1,12 +1,10 @@
 package de.data.preparation
 
-import com.typesafe.config.{ConfigFactory, Config}
+import com.typesafe.config.{Config, ConfigFactory}
+import de.util.Util
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SchemaRDD
-import org.apache.spark.sql.catalyst.expressions.{GenericMutableRow, Row}
+import org.apache.spark.sql.catalyst.expressions.Row
 import org.apache.spark.{SparkConf, SparkContext}
-
-import scala.io.Source
 
 /**
  * Created by visenger on 28/08/15.
@@ -16,13 +14,16 @@ object MSAGWrangler {
   val config: Config = ConfigFactory.load()
 
   def preparePredicates(): Unit = {
-    val path: String = config.getString("data.msag.path")
-    //val path: String="file:///home/larysa/rockit/tmp/probe"
-    val author = "author19525FF1.txt"
-    val papers = "papers19525FF1.txt"
+    //val path: String = config.getString("data.msag.path")
+    val path: String = "file:///home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph"
+    //val author = "author19525FF1.txt"
+    val author = "PaperAuthorAffiliations.txt"
+    //val papers = "papers19525FF1.txt"
+    val papers = "Papers.txt"
 
-    val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
-    //val conf = new SparkConf().setAppName("MSAG")
+    //val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
+    val conf = new SparkConf().setAppName("MSAG")
+    conf.set("spark.storage.memoryFraction", "0.9")
     val sc = new SparkContext(conf)
 
     val authorTuples = sc.textFile(s"$path/$author").map(t => {
@@ -36,7 +37,6 @@ object MSAGWrangler {
       val paper = Papers(paperId, originTitle, normalTitle, publishYear.toInt, publishDate, doi, originVenue, normalizedVenue, jornalId, paperRank)
       paper
     })
-
 
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
     import sqlContext.createSchemaRDD
@@ -93,40 +93,39 @@ object MSAGWrangler {
 
     })
 
+
     /* write to disc: */
 
-    noisyData.foreach(d => {
+
+
+    import sys.process._
+    val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data"
+    noisyData.collect().foreach(d => {
 
       val id: String = d.authorId /* create folder with this id */
 
+      s"mkdir $pathForData/$id".!
+
       val cleanRows: List[String] = d.cleanData.map(_.getCSVRow) /* write to disc: */
+      Util.writeToFile(cleanRows, s"$pathForData/$id/clean-$id.csv")
+
       val goldStnd: List[String] = d.goldStandard.map(_.getCSVRow) /* write to disc: */
+      Util.writeToFile(goldStnd, s"$pathForData/$id/goldstnd-$id.csv")
 
       val dataWithMissingValues: List[PaperAuthorAffilRow] = d.dataWithMissingVals
+
       val noisyRows: List[String] = dataWithMissingValues.map(_.getCSVRow) /* write to disc: */
+      Util.writeToFile(noisyRows, s"$pathForData/$id/noisy-$id.csv")
 
       val predicatesForMissingVals: List[String] = dataWithMissingValues.map(_.getPredicates) /* write to disc: */
       val inRangePredicates: List[String] = d.createInRangePredicates /* write to disc: */
+      Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$id/predicates-$id.db")
 
 
     })
-
-
-
-
     /* todo: remove this */
-    val fiveOrMorePubs: Long = authorsWithManyPubs.count()
 
-    val notNull: Long = filteredNotNull.count
-    val authorsCount: Long = query.count()
-
-    println("authorsCount = " + authorsCount)
-
-    println("filteredNotNull = " + notNull)
-
-    println("fiveOrMorePubs = " + fiveOrMorePubs)
-
-    noisyData.collect().foreach(n => println(n.dataWithMissingVals))
+    //noisyData.collect().foreach(n => println(n.dataWithMissingVals))
   }
 
   val convertRows: (List[Row] => List[PaperAuthorAffilRow]) = (rows) => {
@@ -150,9 +149,9 @@ case class Papers(paperId: String, originTitle: String, normalTitle: String, pub
 
 case class PaperAuthorAffilRow(paperId: String, authorId: String, affilId: String, originAffil: String, normalAffil: String, aSequenceNr: String, publishYear: Int, publishDate: String) {
   def getPredicates: String = {
-    s"""author("$paperId", "$authorId")
-                                       |affiliation("$paperId", "$affilId")
-                                                                           |publishYear("$paperId", "$publishYear")""".stripMargin
+    val affiliationPredicate: String = if (affilId == "") "" else s"""\naffiliation("$paperId", "$affilId")"""
+    s"""author("$paperId", "$authorId")$affiliationPredicate
+        |publishYear("$paperId", "$publishYear")""".stripMargin
   }
 
   def getCSVRow: String = {
