@@ -14,15 +14,18 @@ object MSAGWrangler {
   val config: Config = ConfigFactory.load()
 
   def preparePredicates(): Unit = {
-    //val path: String = config.getString("data.msag.path")
-    val path: String = "file:///home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph"
-    //val author = "author19525FF1.txt"
-    val author = "PaperAuthorAffiliations.txt"
-    //val papers = "papers19525FF1.txt"
-    val papers = "Papers.txt"
 
-    //val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
-    val conf = new SparkConf().setAppName("MSAG")
+    //val conf = new SparkConf().setAppName("MSAG")
+    //val path: String = "file:///home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph"
+    //val author = "PaperAuthorAffiliations.txt"
+    //val papers = "Papers.txt"
+
+
+    val path: String = config.getString("data.msag.path")
+    val author = "author19525FF1.txt"
+    val papers = "papers19525FF1.txt"
+    val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
+
     conf.set("spark.storage.memoryFraction", "0.9")
     val sc = new SparkContext(conf)
 
@@ -44,12 +47,21 @@ object MSAGWrangler {
     authorTuples.registerTempTable("authors")
     papersByAuthor.registerTempTable("papers")
 
+
     /* joining authors and papers in order to obtain the publishing year and date of each publication */
+    //    val query = sqlContext.sql(
+    //      s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
+    //         |FROM authors a, papers p
+    //         |WHERE a.paperId=p.paperId
+    //       """.stripMargin)
+
     val query = sqlContext.sql(
       s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
-         |FROM authors a, papers p
-         |WHERE a.paperId=p.paperId
+         |FROM authors a
+         |JOIN papers p ON a.paperId=p.paperId
+         |WHERE a.affilId IS NOT NULL AND a.affilId <> ''
        """.stripMargin)
+
 
     /* the structure of Row: todo: if the select statement changes, change the rows idx accordingly!
     r(0) --> a.paperId,
@@ -64,18 +76,19 @@ object MSAGWrangler {
 
     /* Row corresponds to a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
        let's filter those rows, which do have an affiliation id */
-    val filteredNotNull: RDD[Row] =
-      query.map(r => Row(r(0), r(1), r(2), r(3), r(4), r(5), r(6), r(7))).filter(r => r.getString(2) != "")
+    //    val filteredNotNull: RDD[Row] =
+    //      query.map(r => Row(r(0), r(1), r(2), r(3), r(4), r(5), r(6), r(7))).filter(r => r.getString(2) != "")
 
-    val groupedByAuthor: RDD[(Any, Iterable[Row])] = filteredNotNull.groupBy(r => r(1))
+    val groupedByAuthor: RDD[(Any, Iterable[Row])] = query.groupBy(r => r(1))
 
     val authorsWithManyPubs = groupedByAuthor.filter(g => {
-      // who wrote more than 4 publications at the same organisation/affiliation
+      // who wrote more than 10 publications at the same organisation/affiliation
       val groupedByAffilId = g._2.groupBy(r => r(2))
-      val publications = groupedByAffilId.filter(p => p._2.size > 4)
+      val publications = groupedByAffilId.filter(p => p._2.size > 3)
       publications.nonEmpty
     })
 
+    //val sampleAuthors: RDD[(Any, Iterable[Row])] = authorsWithManyPubs.sample(false, 0.05, System.currentTimeMillis())
     val noisyData: RDD[LogNoisyData] = authorsWithManyPubs.map(a => {
       //todo: Achtung! to many thing happening here -> smells
       val authorId: String = a._1.asInstanceOf[String]
@@ -97,10 +110,49 @@ object MSAGWrangler {
     /* write to disc: */
 
 
-
     import sys.process._
-    val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data"
-    noisyData.collect().foreach(d => {
+   // val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
+    val pathForData = path
+
+
+    //val sampleData: Array[LogNoisyData] = noisyData.sample(false, 0.05, System.currentTimeMillis()).collect()
+    val withIndex: RDD[(LogNoisyData, Long)] = noisyData.zipWithIndex
+
+    val count: Long = withIndex.count()
+    println("count = " + count)
+
+    withIndex.foreach(t => {
+
+      val idx = t._2
+
+      val d = t._1
+      s"mkdir $pathForData/$idx".!
+
+      //      data.foreach(d => {
+      val id: String = d.authorId /* create folder with this id */
+
+      s"mkdir $pathForData/$idx/$id".!
+
+      val cleanRows: List[String] = d.cleanData.map(_.getCSVRow) /* write to disc: */
+      Util.writeToFile(cleanRows, s"$pathForData/$idx/$id/clean-$id.csv")
+
+      val goldStnd: List[String] = d.goldStandard.map(_.getCSVRow) /* write to disc: */
+      Util.writeToFile(goldStnd, s"$pathForData/$idx/$id/goldstnd-$id.csv")
+
+      val dataWithMissingValues: List[PaperAuthorAffilRow] = d.dataWithMissingVals
+
+      val noisyRows: List[String] = dataWithMissingValues.map(_.getCSVRow) /* write to disc: */
+      Util.writeToFile(noisyRows, s"$pathForData/$idx/$id/noisy-$id.csv")
+
+      val predicatesForMissingVals: List[String] = dataWithMissingValues.map(_.getPredicates) /* write to disc: */
+      val inRangePredicates: List[String] = d.createInRangePredicates /* write to disc: */
+      Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$idx/$id/predicates-$id.db")
+
+      //      })
+
+    })
+
+    /*sampleData.foreach(d => {
 
       val id: String = d.authorId /* create folder with this id */
 
@@ -122,7 +174,7 @@ object MSAGWrangler {
       Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$id/predicates-$id.db")
 
 
-    })
+    })*/
     /* todo: remove this */
 
     //noisyData.collect().foreach(n => println(n.dataWithMissingVals))
@@ -149,7 +201,10 @@ case class Papers(paperId: String, originTitle: String, normalTitle: String, pub
 
 case class PaperAuthorAffilRow(paperId: String, authorId: String, affilId: String, originAffil: String, normalAffil: String, aSequenceNr: String, publishYear: Int, publishDate: String) {
   def getPredicates: String = {
-    val affiliationPredicate: String = if (affilId == "") "" else s"""\naffiliation("$paperId", "$affilId")"""
+    val affiliationPredicate: String = if (affilId == "") "" else
+      s"""\naffiliation("$paperId", "$affilId")
+         |originAffiliationName("$paperId","$originAffil")
+         |normalAffiliationName("$paperId","$normalAffil")""".stripMargin
     s"""author("$paperId", "$authorId")$affiliationPredicate
         |publishYear("$paperId", "$publishYear")""".stripMargin
   }
