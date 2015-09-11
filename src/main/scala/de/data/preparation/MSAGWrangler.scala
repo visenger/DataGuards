@@ -6,6 +6,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.Row
 import org.apache.spark.{SparkConf, SparkContext}
 
+import scala.io.Source
+
 /**
  * Created by visenger on 28/08/15.
  */
@@ -47,14 +49,6 @@ object MSAGWrangler {
     authorTuples.registerTempTable("authors")
     papersByAuthor.registerTempTable("papers")
 
-
-    /* joining authors and papers in order to obtain the publishing year and date of each publication */
-    //    val query = sqlContext.sql(
-    //      s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
-    //         |FROM authors a, papers p
-    //         |WHERE a.paperId=p.paperId
-    //       """.stripMargin)
-
     val query = sqlContext.sql(
       s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
          |FROM authors a
@@ -94,15 +88,24 @@ object MSAGWrangler {
       val authorId: String = a._1.asInstanceOf[String]
       val papersByAuthor: List[Row] = a._2.toList /* clean data */
       val groupedByAffilId: Map[Any, List[Row]] = papersByAuthor.groupBy(r => r(2)) /* r(2) is the AffiliationID column*/
+
       val manyPubs: Map[Any, List[Row]] = groupedByAffilId.filter(p => p._2.size >= 3) /* if where more than 3 publications made by the same affiliation*/
-      val rowsToBeRemoved: List[Row] = manyPubs.map(p => p._2.toList.head).toList /* let's remember the first and then use it for the data cleaning*/
+      val goldStandard: List[(Row, List[Row])] = manyPubs.map(p => (p._2.head, p._2.tail)).toList
+      val rowsToBeRemoved: List[Row] = goldStandard.map(g => g._1)
+      //manyPubs.map(p => p._2.toList.head).toList /* let's remember the first and then use it for the data cleaning*/
+      //manyPubs.map(p => p._2.toList.head).toList the tail of the list is going to be a gold standard predicates.
+      // that means: rowsToBeRemoved should point to the tail.
 
       /* let's remove affilId and affilNames from the clean data */
       val dirtyRows: List[Row] = rowsToBeRemoved.map(r => Row(r(0), r(1), "", "", "", r(5), r(6), r(7)))
       val cleanRowsDelta: List[Row] = papersByAuthor.diff(rowsToBeRemoved)
       val dirtyDataSet: List[Row] = cleanRowsDelta ::: dirtyRows
 
-      LogNoisyData(authorId, convertRows(papersByAuthor), convertRows(dirtyDataSet), convertRows(rowsToBeRemoved))
+      val goldStndConverted: List[(PaperAuthorAffilRow, List[PaperAuthorAffilRow])] = goldStandard.map(g => (convertRow(g._1), convertRows(g._2)))
+
+      //LogNoisyData(authorId, convertRows(papersByAuthor), convertRows(dirtyDataSet), convertRows(rowsToBeRemoved))
+
+      LogNoisyData(authorId, convertRows(papersByAuthor), convertRows(dirtyDataSet), goldStndConverted)
 
     })
 
@@ -111,7 +114,7 @@ object MSAGWrangler {
 
 
     import sys.process._
-   // val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
+    // val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
     val pathForData = path
 
 
@@ -125,7 +128,7 @@ object MSAGWrangler {
 
       val idx = t._2
 
-      val d = t._1
+      val d: LogNoisyData = t._1
       s"mkdir $pathForData/$idx".!
 
       //      data.foreach(d => {
@@ -139,6 +142,13 @@ object MSAGWrangler {
       val goldStnd: List[String] = d.goldStandard.map(_.getCSVRow) /* write to disc: */
       Util.writeToFile(goldStnd, s"$pathForData/$idx/$id/goldstnd-$id.csv")
 
+      val dataForEvaluation: EvaluatorForPredicates = d.generateDataForEvaluation
+      val regexToSearchResult: List[String] = dataForEvaluation.regexToSearchResult
+      Util.writeToFile(regexToSearchResult, s"$pathForData/$idx/$id/regex-$id.txt")
+
+      val referencePredicates: List[String] = dataForEvaluation.referencePredicates
+      Util.writeToFile(referencePredicates, s"$pathForData/$idx/$id/reference-$id.txt")
+
       val dataWithMissingValues: List[PaperAuthorAffilRow] = d.dataWithMissingVals
 
       val noisyRows: List[String] = dataWithMissingValues.map(_.getCSVRow) /* write to disc: */
@@ -148,41 +158,17 @@ object MSAGWrangler {
       val inRangePredicates: List[String] = d.createInRangePredicates /* write to disc: */
       Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$idx/$id/predicates-$id.db")
 
-      //      })
 
     })
 
-    /*sampleData.foreach(d => {
-
-      val id: String = d.authorId /* create folder with this id */
-
-      s"mkdir $pathForData/$id".!
-
-      val cleanRows: List[String] = d.cleanData.map(_.getCSVRow) /* write to disc: */
-      Util.writeToFile(cleanRows, s"$pathForData/$id/clean-$id.csv")
-
-      val goldStnd: List[String] = d.goldStandard.map(_.getCSVRow) /* write to disc: */
-      Util.writeToFile(goldStnd, s"$pathForData/$id/goldstnd-$id.csv")
-
-      val dataWithMissingValues: List[PaperAuthorAffilRow] = d.dataWithMissingVals
-
-      val noisyRows: List[String] = dataWithMissingValues.map(_.getCSVRow) /* write to disc: */
-      Util.writeToFile(noisyRows, s"$pathForData/$id/noisy-$id.csv")
-
-      val predicatesForMissingVals: List[String] = dataWithMissingValues.map(_.getPredicates) /* write to disc: */
-      val inRangePredicates: List[String] = d.createInRangePredicates /* write to disc: */
-      Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$id/predicates-$id.db")
-
-
-    })*/
-    /* todo: remove this */
-
-    //noisyData.collect().foreach(n => println(n.dataWithMissingVals))
+    sc.stop()
   }
 
   val convertRows: (List[Row] => List[PaperAuthorAffilRow]) = (rows) => {
     rows.map(r => PaperAuthorAffilRow(r.getString(0), r.getString(1), r.getString(2), r.getString(3), r.getString(4), r.getString(5), r.getInt(6), r.getString(7)))
   }
+
+  val convertRow: (Row => PaperAuthorAffilRow) = (r) => PaperAuthorAffilRow(r.getString(0), r.getString(1), r.getString(2), r.getString(3), r.getString(4), r.getString(5), r.getInt(6), r.getString(7))
 
 }
 
@@ -200,11 +186,15 @@ case class Papers(paperId: String, originTitle: String, normalTitle: String, pub
 }
 
 case class PaperAuthorAffilRow(paperId: String, authorId: String, affilId: String, originAffil: String, normalAffil: String, aSequenceNr: String, publishYear: Int, publishDate: String) {
+
+  import Util._
+
   def getPredicates: String = {
-    val affiliationPredicate: String = if (affilId == "") "" else
-      s"""\naffiliation("$paperId", "$affilId")
-         |originAffiliationName("$paperId","$originAffil")
-         |normalAffiliationName("$paperId","$normalAffil")""".stripMargin
+    val affiliationPredicate: String = if (affilId == "") ""
+    else
+      s"""\naffiliation("$paperId", "${normalizeGroundAtom(affilId)}")
+                                                                      |originAffiliationName("$affilId","${normalizeGroundAtom(originAffil)}")
+                                                                                                                                              |normalAffiliationName("$affilId","${normalizeGroundAtom(normalAffil)}")""".stripMargin
     s"""author("$paperId", "$authorId")$affiliationPredicate
         |publishYear("$paperId", "$publishYear")""".stripMargin
   }
@@ -214,7 +204,16 @@ case class PaperAuthorAffilRow(paperId: String, authorId: String, affilId: Strin
   }
 }
 
-case class LogNoisyData(authorId: String, cleanData: List[PaperAuthorAffilRow], dataWithMissingVals: List[PaperAuthorAffilRow], goldStandard: List[PaperAuthorAffilRow]) {
+case class EvaluatorForPredicates(removedRows: List[PaperAuthorAffilRow],
+                                  regexToSearchResult: List[String],
+                                  referencePredicates: List[String]) {
+
+}
+
+case class LogNoisyData(authorId: String,
+                        cleanData: List[PaperAuthorAffilRow],
+                        dataWithMissingVals: List[PaperAuthorAffilRow],
+                        goldStndConverted: List[(PaperAuthorAffilRow, List[PaperAuthorAffilRow])]) {
   /*creating inRange(pubYear, pubYear) predicates*/
   def createInRangePredicates: List[String] = {
     val years: Set[Int] = cleanData.map(d => d.publishYear).toSet
@@ -230,6 +229,68 @@ case class LogNoisyData(authorId: String, cleanData: List[PaperAuthorAffilRow], 
 
     inRangePredicates
   }
+
+  /*
+  sameAffiliation(paperid, paperid)
+  sameOriginNames(oname, oname)
+  sameOriginNamesByPaperId(paperid, paperid)
+  missingOriginName(paperid, oname)
+  sameNormalNames(nname, nname)
+  sameNormalNamesByPaperId(paperid, paperid)
+  * */
+  def generateDataForEvaluation: EvaluatorForPredicates = {
+    val evaluatorForPredicateses: List[EvaluatorForPredicates] = goldStndConverted.map(g => {
+      val removedRow: PaperAuthorAffilRow = g._1
+      val paperid: String = removedRow.paperId
+
+      // generate regex for every predicate e.g: sameAffiliation\\(\\".+\\", "$paperid"\\)
+      val re11 = s"""sameAffiliation\\(\\".+\\", "$paperid"\\)"""
+      val re12 = s"""sameAffiliation\\("$paperid", \\".+\\")"""
+      val re21 = s"""sameOriginNamesByPaperId\\(\\".+\\", "$paperid"\\)"""
+      val re22 = s"""sameOriginNamesByPaperId\\("$paperid", \\".+\\")"""
+      val re31 = s"""missingOriginName\\("$paperid", \\".+\\"\\)"""
+      val re41 = s"""sameNormalNamesByPaperId\\(\\".+\\", "$paperid"\\)"""
+      val re42 = s"""sameNormalNamesByPaperId\\("$paperid", \\".+\\")"""
+      val references: List[PaperAuthorAffilRow] = g._2
+      val referencePredicates: List[String] = references.map(ref => {
+        s"""|sameAffiliation("$paperid", "${ref.paperId}")
+                                                          |sameOriginNamesByPaperId("$paperid", "${ref.paperId}")
+                                                                                                                 |missingOriginName("$paperid", "${Util.normalizeGroundAtom(ref.originAffil)}")
+                                                                                                                                                                                               |sameNormalNamesByPaperId("$paperid", "${ref.paperId}")""".stripMargin
+      })
+      EvaluatorForPredicates(List(removedRow), List(re11, re12, re21, re22, re31, re41, re42), referencePredicates)
+
+    })
+
+    val evaluator: EvaluatorForPredicates = evaluatorForPredicateses.reduceLeft((x, y) =>
+      new EvaluatorForPredicates(x.removedRows ::: y.removedRows,
+        x.regexToSearchResult ::: y.regexToSearchResult,
+        x.referencePredicates ::: y.referencePredicates))
+
+    evaluator
+  }
+
+  /**
+   *
+   * @return only lines, which were removed from the data
+   */
+  def goldStandard = goldStndConverted.map(_._1)
+
+
+}
+
+object EverythingTester extends App {
+  val id = "0215F434"
+  val re11 = s"""sameAffiliation\\(\\".+\\", "$id"\\)"""
+
+  val path: String = ConfigFactory.load.getString("data.msag.path")
+
+  val toEvalList: List[String] = Source.fromFile(s"$path/0/19525FF1/output-19525FF1.db").getLines().toList
+
+  val filtered: List[String] = toEvalList.filter(_.matches(re11))
+
+  filtered.foreach(println)
+
 }
 
 object MSAGPlayground {

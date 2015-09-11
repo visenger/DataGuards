@@ -1,0 +1,65 @@
+*publishYear(paperid, pubyear)
+*author(paperid, authorid)
+*affiliation(paperid, affilid)
+*inRange(pubyear, pubyear)
+*originAffiliationName(affilid, oname)
+*normalAffiliationName(affilid, nname)
+
+sameAffiliation(paperid, paperid)
+sameOriginNames(oname, oname)
+sameOriginNamesByPaperId(paperid, paperid)
+missingOriginName(paperid, oname)
+sameNormalNames(nname, nname)
+sameNormalNamesByPaperId(paperid, paperid)
+
+
+
+// GENERAL KNOWLEDGE ABOUT STUFF: TRANSITIVITY, REFLEXIVITY, SYMMETRY... hard knowledge, which always valid.
+!affiliation(id1, a) v !affiliation(id2, a) v  sameAffiliation(id1, id2).
+!affiliation(id1, a) v !affiliation(id2, a) v  sameOriginNamesByPaperId(id1, id2).
+!affiliation(id1, a) v !affiliation(id2, a) v  sameNormalNamesByPaperId(id1, id2).
+
+!sameAffiliation(id1, id2) v !sameAffiliation(id2, id3) v sameAffiliation(id1, id3).
+!sameAffiliation(id1, id2) v sameAffiliation(id2, id1).
+
+!sameOriginNamesByPaperId(id1, id2) v !sameOriginNamesByPaperId(id2, id3) v sameOriginNamesByPaperId(id1, id3).
+!sameOriginNamesByPaperId(id1, id2) v sameOriginNamesByPaperId(id2, id1).
+
+!sameNormalNamesByPaperId(id1, id2) v !sameNormalNamesByPaperId(id2, id3) v sameNormalNamesByPaperId(id1, id3).
+!sameNormalNamesByPaperId(id1, id2) v sameNormalNamesByPaperId(id2, id1).
+
+!inRange(y1, y2) v inRange(y2, y1).
+
+3.0 !sameAffiliation(paper1, paper2) v sameNormalNamesByPaperId(paper1, paper2)
+3.0 !sameNormalNamesByPaperId(paper1, paper2) v sameAffiliation(paper1, paper2)
+3.0 !sameAffiliation(paper1, paper2) v sameOriginNamesByPaperId(paper1, paper2)
+
+// ISSUE 1: missing values
+
+// rule1: authorid, year | affiliation
+// mln: here-> affiliation(paperid1, affiliation) v !affiliation(paperid2, affiliation) the missing affiliation for the paperid1
+2.0 !author(paperid1, authorid) v !author(paperid2, authorid) v !publishYear(paperid1, pubyear) v !publishYear(paperid2, pubyear) v affiliation(paperid1, affiliation) v !affiliation(paperid2, affiliation) v sameAffiliation(paperid1, paperid2)
+
+2.0 !author(paperid1, authorid) v !author(paperid2, authorid) v !publishYear(paperid1, pubyear) v !publishYear(paperid2, pubyear) v !affiliation(paperid1, affiliation) v affiliation(paperid2, affiliation) v sameAffiliation(paperid1, paperid2)
+
+
+// rule2: authorid, year(+/- 2 range) | affiliation
+1.0 !author(paperid1, authorid) v !author(paperid2, authorid) v !publishYear(paperid1, pubyear1) v !publishYear(paperid2, pubyear2) v !inRange(pubyear1, pubyear2) v affiliation(paperid1, affiliation) v !affiliation(paperid2, affiliation)  v  sameAffiliation(paperid1, paperid2)
+
+1.0 !author(paperid1, authorid) v !author(paperid2, authorid) v !publishYear(paperid1, pubyear1) v !publishYear(paperid2, pubyear2) v !inRange(pubyear1, pubyear2) v !affiliation(paperid1, affiliation) v affiliation(paperid2, affiliation)  v  sameAffiliation(paperid1, paperid2)
+
+
+// ISSUE 2: data consistency
+
+// rule3: affiliationID | originalAffiliationName
+
+!affiliation(paperid1, a) v !affiliation(paperid2, a) v !originAffiliationName(a, oname1) v !originAffiliationName(a, oname2) v sameOriginNames(oname1, oname2).
+
+2.0 !affiliation(paperid2, a) v !originAffiliationName(a, oname2) v !sameOriginNames(oname1, oname2) v !sameAffiliation(paperid1, paperid2) v missingOriginName(paperid1, oname1)
+
+2.0 !affiliation(paperid1, a) v !originAffiliationName(a, oname1) v !sameOriginNames(oname1, oname2) v !sameAffiliation(paperid1, paperid2) v missingOriginName(paperid2, oname2)
+
+
+//2.0 !sameAffiliation(paperid1, paperid2) v !affiliation(paperid1, a) v !affiliation(paperid2, a) v !originAffiliationName(a, oname1) v !originAffiliationName(a, oname2) v sameOriginNames(oname1, oname2)
+
+//2.0 !sameNormalNamesByPaperId(paperid1, paperid2) v !affiliation(paperid1, a) v !affiliation(paperid2, a) v !originAffiliationName(a, oname1) v !originAffiliationName(a, oname2) v sameOriginNames(oname1, oname2)
