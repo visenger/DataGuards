@@ -245,12 +245,12 @@ case class LogNoisyData(authorId: String,
 
       // generate regex for every predicate e.g: sameAffiliation\\(\\".+\\", "$paperid"\\)
       val re11 = s"""sameAffiliation\\(\\".+\\", "$paperid"\\)"""
-      val re12 = s"""sameAffiliation\\("$paperid", \\".+\\")"""
+      val re12 = s"""sameAffiliation\\("$paperid", \\".+\\"\\)"""
       val re21 = s"""sameOriginNamesByPaperId\\(\\".+\\", "$paperid"\\)"""
-      val re22 = s"""sameOriginNamesByPaperId\\("$paperid", \\".+\\")"""
+      val re22 = s"""sameOriginNamesByPaperId\\("$paperid", \\".+\\"\\)"""
       val re31 = s"""missingOriginName\\("$paperid", \\".+\\"\\)"""
       val re41 = s"""sameNormalNamesByPaperId\\(\\".+\\", "$paperid"\\)"""
-      val re42 = s"""sameNormalNamesByPaperId\\("$paperid", \\".+\\")"""
+      val re42 = s"""sameNormalNamesByPaperId\\("$paperid", \\".+\\"\\)"""
       val references: List[PaperAuthorAffilRow] = g._2
       val referencePredicates: List[String] = references.map(ref => {
         s"""|sameAffiliation("$paperid", "${ref.paperId}")
@@ -280,17 +280,72 @@ case class LogNoisyData(authorId: String,
 }
 
 object EverythingTester extends App {
-  val id = "0215F434"
-  val re11 = s"""sameAffiliation\\(\\".+\\", "$id"\\)"""
+  //val id = "0215F434"
+  // val re11 = s"""sameAffiliation\\(\\".+\\", "$id"\\)"""
 
   val path: String = ConfigFactory.load.getString("data.msag.path")
+  val regexList: List[String] = Source.fromFile(s"$path/0/19525FF1/regex-19525FF1.txt").getLines().toList
+
 
   val toEvalList: List[String] = Source.fromFile(s"$path/0/19525FF1/output-19525FF1.db").getLines().toList
 
-  val filtered: List[String] = toEvalList.filter(_.matches(re11))
 
-  filtered.foreach(println)
+  val allWeNeed: List[List[String]] = for (r <- regexList) yield {
+    val selected: List[String] = toEvalList.filter(_.matches(r))
+    selected
+  }
+  val selectedPredicates: List[String] = allWeNeed.flatten
 
+  //todo: deduplicate predicates
+
+  val markovLogicPredicates: List[MarkovLogicPredicate] = selectedPredicates.map(MarkovLogicPredicate.apply)
+
+  private val distinct: List[MarkovLogicPredicate] = markovLogicPredicates.distinct
+  distinct.foreach(println)
+  println("markovLogicPredicates = " + markovLogicPredicates.size)
+  println("distinct = " + distinct.size)
+
+}
+
+class MarkovLogicPredicate(val name: String, val firstArg: String, val secondArg: String) {
+
+
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + name.hashCode + firstArg.hashCode + secondArg.hashCode
+    result
+  }
+
+  override def equals(that: scala.Any): Boolean = {
+    //todo: finish this: two predicates are equal if ...
+    //predicate(a,b) should be equal to predicate(a, b) or predicate(b, a)
+    that match {
+      case that: MarkovLogicPredicate => {
+        val predicate = that.asInstanceOf[MarkovLogicPredicate]
+        val generally = that.canEqual(this) && this.hashCode == that.hashCode && predicate.name == this.name
+
+        val specifically = {
+          (predicate.firstArg == this.firstArg && predicate.secondArg == this.secondArg) ||
+            (predicate.firstArg == this.secondArg && predicate.secondArg == this.firstArg)
+        }
+        generally && specifically
+      }
+      case _ => false
+    }
+  }
+
+  override def toString: String = s"$name($firstArg, $secondArg)"
+
+  def canEqual(that: Any): Boolean = that.isInstanceOf[MarkovLogicPredicate]
+}
+
+object MarkovLogicPredicate {
+  def apply(raw: String): MarkovLogicPredicate = {
+    val ExpectedPredicate = "(.+)\\(\"(.+)\", \"(.+)\"\\)".r
+    val ExpectedPredicate(predicateName, firstArg, secondArg) = raw
+    new MarkovLogicPredicate(predicateName, firstArg, secondArg)
+  }
 }
 
 object MSAGPlayground {
