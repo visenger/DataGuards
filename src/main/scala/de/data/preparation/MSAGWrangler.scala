@@ -17,16 +17,16 @@ object MSAGWrangler {
 
   def preparePredicates(): Unit = {
 
-    //val conf = new SparkConf().setAppName("MSAG")
-    //val path: String = "file:///home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph"
-    //val author = "PaperAuthorAffiliations.txt"
-    //val papers = "Papers.txt"
+    val conf = new SparkConf().setAppName("MSAG")
+    val path: String = "file:///home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph"
+    val author = "PaperAuthorAffiliations.txt"
+    val papers = "Papers.txt"
 
 
-    val path: String = config.getString("data.msag.path")
-    val author = "author19525FF1.txt"
-    val papers = "papers19525FF1.txt"
-    val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
+    //    val path: String = config.getString("data.msag.path")
+    //    val author = "author19525FF1.txt"
+    //    val papers = "papers19525FF1.txt"
+    //    val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
 
     conf.set("spark.storage.memoryFraction", "0.9")
     val sc = new SparkContext(conf)
@@ -78,12 +78,12 @@ object MSAGWrangler {
     val authorsWithManyPubs = groupedByAuthor.filter(g => {
       // who wrote more than 10 publications at the same organisation/affiliation
       val groupedByAffilId = g._2.groupBy(r => r(2))
-      val publications = groupedByAffilId.filter(p => p._2.size > 3)
+      val publications = groupedByAffilId.filter(p => p._2.size > 10)
       publications.nonEmpty
     })
 
-    //val sampleAuthors: RDD[(Any, Iterable[Row])] = authorsWithManyPubs.sample(false, 0.05, System.currentTimeMillis())
-    val noisyData: RDD[LogNoisyData] = authorsWithManyPubs.map(a => {
+    val sampleAuthors: RDD[(Any, Iterable[Row])] = authorsWithManyPubs.sample(false, 0.05, System.currentTimeMillis())
+    val noisyData: RDD[LogNoisyData] = sampleAuthors.map(a => {
       //todo: Achtung! to many thing happening here -> smells
       val authorId: String = a._1.asInstanceOf[String]
       val papersByAuthor: List[Row] = a._2.toList /* clean data */
@@ -114,15 +114,13 @@ object MSAGWrangler {
 
 
     import sys.process._
-    // val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
-    val pathForData = path
+    val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
+    // val pathForData = path
 
-
-    //val sampleData: Array[LogNoisyData] = noisyData.sample(false, 0.05, System.currentTimeMillis()).collect()
     val withIndex: RDD[(LogNoisyData, Long)] = noisyData.zipWithIndex
 
-    val count: Long = withIndex.count()
-    println("count = " + count)
+    //    val count: Long = withIndex.count()
+    //    println("count = " + count)
 
     withIndex.foreach(t => {
 
@@ -142,13 +140,6 @@ object MSAGWrangler {
       val goldStnd: List[String] = d.goldStandard.map(_.getCSVRow) /* write to disc: */
       Util.writeToFile(goldStnd, s"$pathForData/$idx/$id/goldstnd-$id.csv")
 
-      val dataForEvaluation: EvaluatorForPredicates = d.generateDataForEvaluation
-      val regexToSearchResult: List[String] = dataForEvaluation.regexToSearchResult
-      Util.writeToFile(regexToSearchResult, s"$pathForData/$idx/$id/regex-$id.txt")
-
-      val referencePredicates: List[String] = dataForEvaluation.referencePredicates
-      Util.writeToFile(referencePredicates, s"$pathForData/$idx/$id/reference-$id.txt")
-
       val dataWithMissingValues: List[PaperAuthorAffilRow] = d.dataWithMissingVals
 
       val noisyRows: List[String] = dataWithMissingValues.map(_.getCSVRow) /* write to disc: */
@@ -158,7 +149,13 @@ object MSAGWrangler {
       val inRangePredicates: List[String] = d.createInRangePredicates /* write to disc: */
       Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$idx/$id/predicates-$id.db")
 
+      /* evaluation related data */
+      val dataForEvaluation: EvaluatorForPredicates = d.generateDataForEvaluation
+      val regexToSearchResult: List[String] = dataForEvaluation.regexToSearchResult
+      Util.writeToFile(regexToSearchResult, s"$pathForData/$idx/$id/regex-$id.txt")
 
+      val referencePredicates: List[String] = dataForEvaluation.referencePredicates
+      Util.writeToFile(referencePredicates, s"$pathForData/$idx/$id/reference-$id.txt")
     })
 
     sc.stop()
@@ -279,74 +276,8 @@ case class LogNoisyData(authorId: String,
 
 }
 
-object EverythingTester extends App {
-  //val id = "0215F434"
-  // val re11 = s"""sameAffiliation\\(\\".+\\", "$id"\\)"""
-
-  val path: String = ConfigFactory.load.getString("data.msag.path")
-  val regexList: List[String] = Source.fromFile(s"$path/0/19525FF1/regex-19525FF1.txt").getLines().toList
 
 
-  val toEvalList: List[String] = Source.fromFile(s"$path/0/19525FF1/output-19525FF1.db").getLines().toList
-
-
-  val allWeNeed: List[List[String]] = for (r <- regexList) yield {
-    val selected: List[String] = toEvalList.filter(_.matches(r))
-    selected
-  }
-  val selectedPredicates: List[String] = allWeNeed.flatten
-
-  //todo: deduplicate predicates
-
-  val markovLogicPredicates: List[MarkovLogicPredicate] = selectedPredicates.map(MarkovLogicPredicate.apply)
-
-  private val distinct: List[MarkovLogicPredicate] = markovLogicPredicates.distinct
-  distinct.foreach(println)
-  println("markovLogicPredicates = " + markovLogicPredicates.size)
-  println("distinct = " + distinct.size)
-
-}
-
-class MarkovLogicPredicate(val name: String, val firstArg: String, val secondArg: String) {
-
-
-  override def hashCode(): Int = {
-    val prime = 31
-    var result = 1
-    result = prime * result + name.hashCode + firstArg.hashCode + secondArg.hashCode
-    result
-  }
-
-  override def equals(that: scala.Any): Boolean = {
-    //todo: finish this: two predicates are equal if ...
-    //predicate(a,b) should be equal to predicate(a, b) or predicate(b, a)
-    that match {
-      case that: MarkovLogicPredicate => {
-        val predicate = that.asInstanceOf[MarkovLogicPredicate]
-        val generally = that.canEqual(this) && this.hashCode == that.hashCode && predicate.name == this.name
-
-        val specifically = {
-          (predicate.firstArg == this.firstArg && predicate.secondArg == this.secondArg) ||
-            (predicate.firstArg == this.secondArg && predicate.secondArg == this.firstArg)
-        }
-        generally && specifically
-      }
-      case _ => false
-    }
-  }
-
-  override def toString: String = s"$name($firstArg, $secondArg)"
-
-  def canEqual(that: Any): Boolean = that.isInstanceOf[MarkovLogicPredicate]
-}
-
-object MarkovLogicPredicate {
-  def apply(raw: String): MarkovLogicPredicate = {
-    val ExpectedPredicate = "(.+)\\(\"(.+)\", \"(.+)\"\\)".r
-    val ExpectedPredicate(predicateName, firstArg, secondArg) = raw
-    new MarkovLogicPredicate(predicateName, firstArg, secondArg)
-  }
-}
 
 object MSAGPlayground {
   def main(args: Array[String]) {

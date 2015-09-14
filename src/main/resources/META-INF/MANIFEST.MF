@@ -1,0 +1,46 @@
+Manifest-Version: 1.0
+Class-Path: tachyon-client-0.5.0.jar netlib-java-0.9.3.jar commons-io-
+ 2.4.jar concurrent-1.3.4.jar scalalogging-log4j_2.10-1.0.1.jar common
+ s-codec-1.3.jar commons-digester-1.8.jar log4j-1.2.17.jar netty-3.6.6
+ .Final.jar slf4j-log4j12-1.7.5.jar pyrolite-2.0.1.jar hsqldb-1.8.0.10
+ .jar jtransforms-2.4.0.jar commons-math3-3.2.jar compress-lzf-1.0.0.j
+ ar xmlenc-0.52.jar spark-catalyst_2.10-1.1.0.jar jetty-http-8.1.14.v2
+ 0131031.jar uncommons-maths-1.2.2a.jar metrics-jvm-3.0.0.jar jul-to-s
+ lf4j-1.7.5.jar netty-all-4.0.23.Final.jar jblas-1.2.3.jar jetty-webap
+ p-8.1.14.v20131031.jar spark-core_2.10-1.1.0.jar slf4j-api-1.7.5.jar 
+ jetty-io-8.1.14.v20131031.jar commons-lang-2.4.jar jackson-core-asl-1
+ .9.11.jar jetty-xml-8.1.14.v20131031.jar commons-beanutils-core-1.8.0
+ .jar parquet-generator-1.4.3.jar tachyon-0.5.0.jar json4s-ast_2.10-3.
+ 2.10.jar curator-client-2.4.0.jar parquet-format-2.0.0.jar zookeeper-
+ 3.4.5.jar commons-lang3-3.3.2.jar jackson-annotations-2.3.0.jar curat
+ or-recipes-2.4.0.jar commons-math-2.1.jar chill-java-0.3.6.jar jcl-ov
+ er-slf4j-1.7.5.jar scala-library-2.10.3.jar scala-reflect-2.10.3.jar 
+ commons-configuration-1.6.jar akka-slf4j_2.10-2.2.3-shaded-protobuf.j
+ ar breeze-core_2.10-0.4.jar parquet-column-1.4.3.jar javax.transactio
+ n-1.1.1.v201105210645.jar minlog-1.2.jar jetty-jndi-8.1.14.v20131031.
+ jar metrics-core-3.0.0.jar scala-reflect-2.10.4.jar parquet-hadoop-1.
+ 4.3.jar javax.servlet-3.0.0.v201112011016.jar commons-httpclient-3.1.
+ jar commons-logging-1.1.1.jar parquet-jackson-1.4.3.jar jets3t-0.7.1.
+ jar colt-1.2.0.jar breeze-math_2.10-0.4.jar akka-actor_2.10-2.2.3-sha
+ ded-protobuf.jar protobuf-java-2.4.1-shaded.jar metrics-graphite-3.0.
+ 0.jar chill_2.10-0.3.6.jar metrics-json-3.0.0.jar reflectasm-1.07-sha
+ ded.jar log4j-api-2.0-beta3.jar log4j-core-2.0-beta4.jar config-1.2.1
+ .jar hadoop-client-1.0.4.jar jetty-util-8.1.14.v20131031.jar json4s-c
+ ore_2.10-3.2.10.jar curator-framework-2.4.0.jar javax.mail.glassfish-
+ 1.4.1.v201005082020.jar mesos-0.18.1-shaded-protobuf.jar objenesis-1.
+ 2.jar jetty-continuation-8.1.14.v20131031.jar akka-remote_2.10-2.2.3-
+ shaded-protobuf.jar stream-2.7.0.jar junit-4.8.2.jar jetty-plus-8.1.1
+ 4.v20131031.jar snappy-java-1.0.5.3.jar jackson-core-2.3.0.jar common
+ s-net-2.2.jar json4s-jackson_2.10-3.2.10.jar paranamer-2.2.jar spark-
+ sql_2.10-1.1.0.jar jackson-mapper-asl-1.9.11.jar jsr305-1.3.9.jar com
+ mons-collections-3.2.1.jar quasiquotes_2.10-2.0.1.jar parquet-encodin
+ g-1.4.3.jar scala-compiler-2.10.4.jar py4j-0.8.2.1.jar scalap-2.10.0.
+ jar opencsv-2.3.jar commons-el-1.0.jar arpack_combined_all-0.1.jar je
+ tty-security-8.1.14.v20131031.jar oro-2.0.8.jar javax.activation-1.1.
+ 0.v201105071233.jar parquet-common-1.4.3.jar kryo-2.21.jar lz4-1.2.0.
+ jar jackson-databind-2.3.0.jar commons-beanutils-1.7.0.jar hadoop-cor
+ e-1.0.4.jar jline-0.9.94.jar guava-14.0.1.jar jetty-servlet-8.1.14.v2
+ 0131031.jar jetty-server-8.1.14.v20131031.jar scala-library-2.10.4.ja
+ r
+Main-Class: de.result.evaluation.Tester
+
