@@ -216,7 +216,7 @@ object InterpolatedPrecisionCreator extends App {
                                                                                                                                                                                                     |(80-90,$btw80and90)
                                                                                                                                                                                                                          |(90-100,$btw90and100)
    """.stripMargin
-  println(barChartData)
+  print(barChartData)
 
 
 }
