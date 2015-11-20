@@ -9,8 +9,8 @@ import org.apache.spark.SparkContext._
 import scala.util.Random
 
 /**
- * Created by visenger on 13/08/14.
- */
+  * Created by visenger on 13/08/14.
+  */
 
 
 case class Customer(custKey: String, name: String, addr: String, natKey: String, phone: String, acc: String, mrkt: String, comment: String)
@@ -94,9 +94,9 @@ object Playground {
 
 object TestMatch extends App {
   val line = "10018,CALLAHAN EYE FOUNDATION HOSPITAL,1720 UNIVERSITY BLVD,,,BIRMINGHAM,AL,35233,JEFFERSON,2053258100,Acute Care Hospitals,Voluntary non-profit - Private,Yes,Surgical Infection Prevention,SCIP-CARD-2,surgery patients who were taking heart drugs called beta blockers before coming to the hospital&#54; who were kept on the beta blockers during the period just before and after their surgery,,,AL_SCIP-CARD-2"
-  val Array(providerID ,x1 ,x2 ,x3 ,x4 , city,state ,zipCode ,x5,phoneNumber ,x6 ,x7 ,x8,condition ,measureID ,measureName ,x9,x10 ,stateAvg ) = line.split( ',')
+  val Array(providerID, x1, x2, x3, x4, city, state, zipCode, x5, phoneNumber, x6, x7, x8, condition, measureID, measureName, x9, x10, stateAvg) = line.split(',')
 
- val item= Hosp2Tuple(providerID.toString.replace('"', ' ').trim, city.toString, state.toString, zipCode.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, stateAvg.toString)
+  val item = Hosp2Tuple(providerID.toString.replace('"', ' ').trim, city.toString, state.toString, zipCode.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, stateAvg.toString)
 
   println("hosp2 = " + item.toString)
 
@@ -186,6 +186,22 @@ object HospStat extends App {
   })
 
 
+}
+
+object CombinationsTester extends App {
+
+  implicit class Crossable[T](xs: Traversable[T]) {
+    def cross[X](ys: Traversable[X]) = for {x <- xs; y <- ys} yield (x, y)
+  }
+
+  val list = List('a, 'b, 'c, 'd)
+  val tuples: List[((Symbol, Symbol), Symbol)] = (list cross list cross list).toList
+  var i = 1;
+    tuples.foreach(t => {
+
+      println (s"${i} $t")
+      i += 1
+    })
 }
 
 

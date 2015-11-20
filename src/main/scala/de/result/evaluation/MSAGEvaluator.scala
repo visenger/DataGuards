@@ -1,6 +1,10 @@
 package de.result.evaluation
 
 
+import java.io.BufferedWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths, Path}
+
 import com.typesafe.config.ConfigFactory
 import de.util.Util
 
@@ -9,8 +13,8 @@ import scala.io.Source
 import scala.util.Random
 
 /**
- * Created by visenger on 12/09/15.
- */
+  * Created by visenger on 12/09/15.
+  */
 object MSAGEvaluator {
 
   def main(args: Array[String]) {
@@ -100,6 +104,9 @@ object MSAGEvaluator {
   }
 
 }
+
+//i,AUTHOR,EDGES,REMOVED
+case class EdgesStat(forlderNr: String, authorId: String, edgesTotal: Int, removed: Int)
 
 
 class MarkovLogicPredicate(val name: String, val firstArg: String, val secondArg: String) {
@@ -204,27 +211,81 @@ object InterpolatedPrecisionCreator extends App {
 
   })
 
-  val barChartData: String = s"""
-                                  |(>10,$less10)
-                                                 |(10-20,$btw10and20)
-                                                                      |(20-30,$btw20and30)
-                                                                                           |(30-40,$btw30and40)
-                                                                                                                |(40-50,$btw40and50)
-                                                                                                                                     |(50-60,$btw50and60)
-                                                                                                                                                          |(60-70,$btw60and70)
-                                                                                                                                                                               |(70-80,$btw70and80)
-                                                                                                                                                                                                    |(80-90,$btw80and90)
-                                                                                                                                                                                                                         |(90-100,$btw90and100)
+  val barChartData: String =
+    s"""
+       |(<10,$less10)
+       |(10-20,$btw10and20)
+       |(20-30,$btw20and30)
+       |(30-40,$btw30and40)
+       |(40-50,$btw40and50)
+       |(50-60,$btw50and60)
+       |(60-70,$btw60and70)
+       |(70-80,$btw70and80)
+       |(80-90,$btw80and90)
+       |(90-100,$btw90and100)
    """.stripMargin
   print(barChartData)
 
 
 }
 
+object ResultAnalyser extends App {
+  val path: String = "/Users/visenger/data/MSAG/results"
+  val input: Iterator[String] = Source.fromFile(s"${path}/msag-probe.txt").getLines()
+  val edges: List[String] = Source.fromFile(s"${path}/edges-stat.txt").getLines().toList.tail
+
+  val f1Lines: List[F1Line] = input.map(F1Line.apply(_)).toList
+
+
+
+  private val converterToEdgesStat: (String => EdgesStat) = (e) => {
+    val Array(forlderNr, authorId, edgesTotal, removed) = e.split(",")
+    EdgesStat(forlderNr, authorId, edgesTotal.toInt, removed.toInt)
+
+  }
+
+  val edgesStat: Map[String, EdgesStat] = edges.map(converterToEdgesStat).map(e => (e.authorId, e)).toMap
+
+  //  val pathGt: Path = Paths.get(s"${path}/analyseGt.txt")
+  //  val writerGt: BufferedWriter = Files.newBufferedWriter(pathGt, StandardCharsets.UTF_8)
+  //
+  //  val pathLs: Path = Paths.get(s"${path}/analyseLs.txt")
+  //  val writerLs: BufferedWriter = Files.newBufferedWriter(pathLs, StandardCharsets.UTF_8)
+
+  val pathMark: Path = Paths.get(s"${path}/msag-marked.tsv")
+  val writerMark: BufferedWriter = Files.newBufferedWriter(pathMark, StandardCharsets.UTF_8)
+
+  val header: String = s"FOLDER\tAUTHOR\tRECALL\tF1\tTOTALEDGES\tREMOVEDEDGES\tMARK\n"
+  writerMark.write(header)
+  for (f <- f1Lines) yield {
+    val id = f.authorId
+    if (edgesStat.contains(id)) {
+      val stat: EdgesStat = edgesStat.get(id).get
+      val removedEdges: Int = stat.removed
+
+      val mark: String = removedEdges match {
+        case 1 | 2 => "a"
+        case 3 | 4 => "b"
+        case _ => "c"
+      }
+
+      val line: String = s"${f.folderNr}\t${f.authorId}\t${f.recall}\t${f.F1}\t${stat.edgesTotal}\t${removedEdges}\t$mark\n"
+      writerMark.write(line)
+      //      if (f.F1 < 0.49) writerLs.write(line)
+      //      else writerGt.write(line)
+
+    }
+  }
+  writerMark.close()
+  //  writerGt.close()
+  //  writerLs.close()
+
+}
+
 object TesterEverything {
   def main(args: Array[String]) {
-    val folderNames: List[Int] = (790 to 1000).toList
-    val testFolder: List[Int] = Random.shuffle(folderNames).take(50)
+    val folderNames: List[Int] = (5099 to 6000).toList
+    val testFolder: List[Int] = Random.shuffle(folderNames).take(100)
     val withIndex: List[(Int, Int)] = testFolder.zipWithIndex
     withIndex.foreach(f => {
       print(s" ${f._1}")

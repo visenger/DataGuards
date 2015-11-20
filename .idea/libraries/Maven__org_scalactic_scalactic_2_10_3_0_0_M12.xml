@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.scalactic:scalactic_2.10:3.0.0-M12">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/scalactic/scalactic_2.10/3.0.0-M12/scalactic_2.10-3.0.0-M12.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/scalactic/scalactic_2.10/3.0.0-M12/scalactic_2.10-3.0.0-M12-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/scalactic/scalactic_2.10/3.0.0-M12/scalactic_2.10-3.0.0-M12-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -9,8 +9,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 import scala.io.Source
 
 /**
- * Created by visenger on 28/08/15.
- */
+  * Created by visenger on 28/08/15.
+  */
 object MSAGWrangler {
 
   val config: Config = ConfigFactory.load()
@@ -51,9 +51,9 @@ object MSAGWrangler {
 
     val query = sqlContext.sql(
       s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
-         |FROM authors a
-         |JOIN papers p ON a.paperId=p.paperId
-         |WHERE a.affilId IS NOT NULL AND a.affilId <> ''
+          |FROM authors a
+          |JOIN papers p ON a.paperId=p.paperId
+          |WHERE a.affilId IS NOT NULL AND a.affilId <> ''
        """.stripMargin)
 
 
@@ -89,7 +89,7 @@ object MSAGWrangler {
       val papersByAuthor: List[Row] = a._2.toList /* clean data */
       val groupedByAffilId: Map[Any, List[Row]] = papersByAuthor.groupBy(r => r(2)) /* r(2) is the AffiliationID column*/
 
-      val manyPubs: Map[Any, List[Row]] = groupedByAffilId.filter(p => p._2.size >= 3) /* if where more than 3 publications made by the same affiliation*/
+      val manyPubs: Map[Any, List[Row]] = groupedByAffilId.filter(p => p._2.size >= 3) /* if where more than 3 affiliations in portfolio*/
       val goldStandard: List[(Row, List[Row])] = manyPubs.map(p => (p._2.head, p._2.tail)).toList
       val rowsToBeRemoved: List[Row] = goldStandard.map(g => g._1)
       //manyPubs.map(p => p._2.toList.head).toList /* let's remember the first and then use it for the data cleaning*/
@@ -172,7 +172,7 @@ object MSAGWrangler {
 case class PaperAuthorAffil(paperId: String, authorId: String, affilId: String, originAffil: String, normalAffil: String, aSequenceNr: String) {
   def getPredicates: String = {
     s"""author("$paperId", "$authorId")
-                                       |affiliation("$paperId", "$affilId")""".stripMargin
+        |affiliation("$paperId", "$affilId")""".stripMargin
   }
 }
 
@@ -190,8 +190,8 @@ case class PaperAuthorAffilRow(paperId: String, authorId: String, affilId: Strin
     val affiliationPredicate: String = if (affilId == "") ""
     else
       s"""\naffiliation("$paperId", "${normalizeGroundAtom(affilId)}")
-                                                                      |originAffiliationName("$affilId","${normalizeGroundAtom(originAffil)}")
-                                                                                                                                              |normalAffiliationName("$affilId","${normalizeGroundAtom(normalAffil)}")""".stripMargin
+          |originAffiliationName("$affilId","${normalizeGroundAtom(originAffil)}")
+          |normalAffiliationName("$affilId","${normalizeGroundAtom(normalAffil)}")""".stripMargin
     s"""author("$paperId", "$authorId")$affiliationPredicate
         |publishYear("$paperId", "$publishYear")""".stripMargin
   }
@@ -241,7 +241,8 @@ case class LogNoisyData(authorId: String,
       val paperid: String = removedRow.paperId
 
       // generate regex for every predicate e.g: sameAffiliation\\(\\".+\\", "$paperid"\\)
-      val re11 = s"""sameAffiliation\\(\\".+\\", "$paperid"\\)"""
+      val re11 =
+        s"""sameAffiliation\\(\\".+\\", "$paperid"\\)"""
       val re12 = s"""sameAffiliation\\("$paperid", \\".+\\"\\)"""
       val re21 = s"""sameOriginNamesByPaperId\\(\\".+\\", "$paperid"\\)"""
       val re22 = s"""sameOriginNamesByPaperId\\("$paperid", \\".+\\"\\)"""
@@ -251,9 +252,9 @@ case class LogNoisyData(authorId: String,
       val references: List[PaperAuthorAffilRow] = g._2
       val referencePredicates: List[String] = references.map(ref => {
         s"""|sameAffiliation("$paperid", "${ref.paperId}")
-                                                          |sameOriginNamesByPaperId("$paperid", "${ref.paperId}")
-                                                                                                                 |missingOriginName("$paperid", "${Util.normalizeGroundAtom(ref.originAffil)}")
-                                                                                                                                                                                               |sameNormalNamesByPaperId("$paperid", "${ref.paperId}")""".stripMargin
+            |sameOriginNamesByPaperId("$paperid", "${ref.paperId}")
+            |missingOriginName("$paperid", "${Util.normalizeGroundAtom(ref.originAffil)}")
+            |sameNormalNamesByPaperId("$paperid", "${ref.paperId}")""".stripMargin
       })
       EvaluatorForPredicates(List(removedRow), List(re11, re12, re21, re22, re31, re41, re42), referencePredicates)
 
@@ -268,15 +269,13 @@ case class LogNoisyData(authorId: String,
   }
 
   /**
-   *
-   * @return only lines, which were removed from the data
-   */
+    *
+    * @return only lines, which were removed from the data
+    */
   def goldStandard = goldStndConverted.map(_._1)
 
 
 }
-
-
 
 
 object MSAGPlayground {
