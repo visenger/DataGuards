@@ -40,49 +40,51 @@ object MLNStat {
 
     val formulas = mln_as_list.filter(e => e.get.isInstanceOf[Formula] && !e.get.isInstanceOf[Atom])
 
-    /*var domainToVarsDictionary: Map[String, Set[String]] = Map()
-    var varToDomainDictionary: Map[String, String] = Map()
+    /* variable name -> domain*/
+    val varsToDomainNameDictionary: Map[String, String] = assignVariablesToDomainNames(formulas, predicateDefs)
 
-    formulas.foreach(f => {
-      val parsedFormula: Formula = f.get.asInstanceOf[Formula]
-      //      val variables = parsedFormula.allVariables
-      //      println(variables)
+    val groupedByDomName: Map[String, Map[String, String]] = varsToDomainNameDictionary.groupBy { case (varName, domName) => domName }
 
-      val predicates = parsedFormula.allPredicates
-      println(predicates)
-
-      predicates.foreach(_ match {
-
-        case Atom(name, args) => {
-          val predicateDef = if (predicateDefs.contains(name)) predicateDefs.get(name).get
-          predicateDef match {
-            case Predicate1(predicate, domainName) => {
-              var vars: Set[String] = domainToVarsDictionary.getOrElse(domainName, Set())
-              val variable: String = args.head.toString
-              vars += variable
-              domainToVarsDictionary += (domainName -> vars)
-
-              varToDomainDictionary += (variable -> domainName)
-            }
-            case Predicate2(predicate, domainName1, domainName2) => {
-              var vars1: Set[String] = domainToVarsDictionary.getOrElse(domainName1, Set())
-              val variable1: String = args.head.toString
-              vars1 += variable1
-              domainToVarsDictionary += (domainName1 -> vars1)
-              varToDomainDictionary += (variable1 -> domainName1)
-
-              var vars2: Set[String] = domainToVarsDictionary.getOrElse(domainName2, Set())
-              val variable2: String = args.tail.head.toString
-              vars2 += variable2
-              domainToVarsDictionary += (domainName2 -> vars2)
-              varToDomainDictionary += (variable2 -> domainName2)
-            }
-          }
-        }
-      })
+    /* domain name -> set of vars */
+    val domainToVarsDictionary: Map[String, Set[String]] = groupedByDomName.map(e => {
+      val variables: Set[String] = e._2.keySet
+      e._1 -> variables
     })
-*/
-    val variablesToDomainName: Map[String, String] = formulas.foldLeft(Map[String, String]()) {
+
+
+    val db = MLNParser.db
+    val db_train_file = scala.io.Source.fromFile(s"$mln_dir/$db_file")
+    val filtered_db: Iterator[String] = db_train_file.getLines().filter(nonMLNElements(_))
+    val parsed_db = filtered_db.map(MLNParser.parse(db, _)).toList
+    parsed_db foreach (x => println("parsed train db: " + x))
+
+    //todo: gathering domain values
+    val separateDbAtomsAndFuncs: (List[MLNParser.ParseResult[Any]], List[MLNParser.ParseResult[Any]])
+    = parsed_db.partition(_.get.isInstanceOf[DatabaseAtom])
+
+    val dbAtoms = separateDbAtomsAndFuncs._1.map(_.get.asInstanceOf[DatabaseAtom])
+
+    //todo: enhancing domain with constants from the functions
+    val dbFunctions = separateDbAtomsAndFuncs._2.map(_.get.asInstanceOf[DatabaseFunction])
+
+    val atomsGroupedByName: Map[String, List[DatabaseAtom]] = dbAtoms.groupBy(a => a.predicate)
+
+    val domainsByPredicates: Seq[ConstantTypeDef] = extractDomain(atomsGroupedByName, predicateDefs)
+    val domainsByName: Map[String, Seq[ConstantTypeDef]] = domainsByPredicates.groupBy(_.name)
+
+    val domNameToVals: Map[String, Seq[String]] = domainsByName.mapValues(d => {
+      val domain: Seq[String] = d.foldLeft(Set[String]())(_ ++ _.constants).toSeq
+      domain
+    })
+    val allDomains: List[ConstantTypeDef] = domNameToVals.map(e => ConstantTypeDef(e._1, e._2)).toList
+
+    allDomains
+
+
+  }
+
+  def assignVariablesToDomainNames(formulas: List[MLNParser.ParseResult[Expression]], predicateDefs: Map[String, PredicateDefinition]): Map[String, String] = {
+    formulas.foldLeft(Map[String, String]()) {
       (accumulator, element) => {
         val parsedFormula: Formula = element.get.asInstanceOf[Formula]
 
@@ -102,7 +104,7 @@ object MLNStat {
                 case Predicate2(predicate, domainName1, domainName2) => {
                   val variable1: String = args.head.toString
                   val variable2: String = args.tail.head.toString
-                  Seq((variable1 -> domainName1), (variable2 -> domainName2))
+                  Seq(variable1 -> domainName1, variable2 -> domainName2)
                 }
               }
               bindings.toMap
@@ -113,24 +115,35 @@ object MLNStat {
         accumulator ++ singleFormulaVals
       }
     }
+  }
 
-    val groupedByDomName: Map[String, Map[String, String]] = variablesToDomainName.groupBy { case (varName, domName) => domName }
-    val domainToVarsDictionary: Map[String, Set[String]] = groupedByDomName.map(e => {
-      val variables: Set[String] = e._2.keySet
-      e._1 -> variables
-    })
-    domainToVarsDictionary
+  def extractDomain(atomsGroupedByName: Map[String, List[DatabaseAtom]], predicateDefs: Map[String, PredicateDefinition]): Seq[ConstantTypeDef] = {
+    atomsGroupedByName.foldLeft(Seq[ConstantTypeDef]()) { (accumulator, element) => {
+      val predicateName: String = element._1
+      val definition: PredicateDefinition = predicateDefs.get(predicateName).get
 
+      val domainValues: Seq[ConstantTypeDef] = definition match {
+        case Predicate1(name, dom1) => {
+          val domain1Values: Seq[String] = element._2.foldLeft(Seq[String]()) {
+            (a, e) => a ++ Seq(e.args.head.toString)
+          }
+          Seq(ConstantTypeDef(dom1, domain1Values))
+        }
+        case Predicate2(name, dom1, dom2) => {
+          val domain1Values: Seq[String] = element._2.foldLeft(Seq[String]()) {
+            (a, e1) => a ++ Seq(e1.args.head.toString)
+          }
+          val domain2Values: Seq[String] = element._2.foldLeft(Seq[String]()) {
+            (a, e2) => a ++ Seq(e2.args.tail.head.toString)
+          }
+          Seq(ConstantTypeDef(dom1, domain1Values), ConstantTypeDef(dom2, domain2Values))
+        }
+      }
 
+      accumulator ++ domainValues
 
-
-    val db = MLNParser.db
-    val db_train_file = scala.io.Source.fromFile(s"$mln_dir/$db_file")
-    val filtered_db: Iterator[String] = db_train_file.getLines().filter(nonMLNElements(_))
-    val parsed_db = filtered_db map (MLNParser.parse(db, _))
-    parsed_db foreach (x => println("parsed train db: " + x))
-
-
+    }
+    }
   }
 
   def nonMLNElements(x: String): Boolean = {

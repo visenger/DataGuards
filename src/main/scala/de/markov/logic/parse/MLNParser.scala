@@ -219,7 +219,7 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
     *
     */
 
-  def db: Parser[Any] = (dbFunctions ||| databaseAtom)
+  def db: Parser[Any] = (databaseFunction ||| databaseAtom)
 
   val positive = true
 
@@ -235,9 +235,9 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
     t => t
   }
 
-  def dbFunctions: Parser[List[DatabaseFunction]] = rep(databaseFunction) ^^ {
-    case t => t
-  }
+  //  def dbFunctions: Parser[DatabaseFunction] = rep(databaseFunction) ^^ {
+  //    case t => t
+  //  }
 
   def databaseFunction: Parser[DatabaseFunction] = constant ~ "=" ~ StringLit ~ "(" ~ groundedTermList ~ ")" ^^ {
     case value ~ "=" ~ fName ~ "(" ~ cons ~ ")" => DatabaseFunction(value, fName, cons)
@@ -268,7 +268,9 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
       allVariables.filter(_.isInstanceOf[PlusVariable]).map(_.asInstanceOf[PlusVariable]).toSeq
   }
 
-  case class Constant(value: String) extends Term
+  case class Constant(value: String) extends Term {
+    override def toString: String = value
+  }
 
   trait Variable extends Term {
     def name: String
