@@ -1,7 +1,6 @@
 package de.markov.logic.parse
 
-import de.markov.logic.parse.com.github.riedelcastro.theppl.parse.MLNParser
-import de.markov.logic.parse.com.github.riedelcastro.theppl.parse.MLNParser._
+import de.markov.logic.parse.MLNParser._
 import org.scalatest.{FunSpec, MustMatchers}
 
 /**

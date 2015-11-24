@@ -3,9 +3,10 @@ package de.markov.logic.parse
 /**
   * Created by visenger on 20/11/15.
   */
-package com.github.riedelcastro.theppl.parse
+
 
 import _root_.scala.util.parsing.combinator.{RegexParsers, JavaTokenParsers}
+
 //import com.google.common.base.Strings
 
 
@@ -283,6 +284,14 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
 
   sealed trait Formula extends Expression {
     def subformulas: Seq[Formula] = Seq()
+
+    lazy val allPredicates: Set[Formula] = this match {
+      case Atom(_, _) => Set(this)
+      case PlusAtom(_, _) => Set(this)
+      case _ => this.subformulas.foldLeft(Set[Formula]()) {
+        _ ++ _.allPredicates
+      }
+    }
 
     lazy val allVariables: Set[Variable] = this match {
       case Atom(_, args) => args.foldLeft(Set[Variable]())(_ ++ _.allVariables)
