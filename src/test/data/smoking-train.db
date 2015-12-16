@@ -23,5 +23,13 @@ Smokes(Gary)
 Cancer(Anna)
 Cancer(Edward)
 
+City(1,LDN)
+Zip(1,1045)
+
+City(2.0,BRN)
+Zip(2.0,1415)
+
 Alice = SpouseOf(Bob)
 Bob = SpouseOf(Alice)
+
+

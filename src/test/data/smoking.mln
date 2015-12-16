@@ -1,10 +1,14 @@
 // MLN for social networks section in tutorial
 age = {18, ..., 22}
-person = { Alice, Bob }
+//person = { Alice, Bob }
 // Some evidence, some query
 Smokes(person)
 // Query
 Cancer(person)
+
+
+City(id,name)
+Zip(id,zipcode)
 
 
 // Function definition
@@ -12,6 +16,8 @@ person SpouseOf(person)
 // Evidence
 Friends(person, person)
 
+
+!City(i1 ,n) v !City(i2, n) v !Zip(i1, z) v Zip(i1,z)
 // Rules
 // todo: formula consisting of single predicate:
 0.0 Smokes(x)
@@ -23,6 +29,8 @@ Friends(person, person)
 // People with friends who smoke, also smoke
 // and those with friends who don't smoke, don't smoke
 5.8 Friends(x, y) => (Smokes(x) <=> Smokes(y))
+
+5.3 Friends(x1, y1) => (Smokes(x1) <=> Smokes(y1))
 //mln playground
 Friends(x, Anna) <=> Friends(Anna, x).
 //Friends(Anna,y) => !Smokes(+y)

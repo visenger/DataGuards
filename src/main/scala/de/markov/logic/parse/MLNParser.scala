@@ -20,6 +20,7 @@ import _root_.scala.util.parsing.combinator.{RegexParsers, JavaTokenParsers}
 object MLNParser extends JavaTokenParsers with RegexParsers {
   val LowerCaseID = """[a-z]([a-zA-Z0-9]|_[a-zA-Z0-9])*""".r
   val UpperCaseID = """[A-Z]([a-zA-Z0-9]|_[a-zA-Z0-9])*""".r
+  val MixedNumLiteralID = """[A-Z0-9]([a-zA-Z0-9]|_[a-zA-Z0-9])*""".r
   val NumDouble = "-?\\d+(\\.\\d+)?".r
   val NumPosInt = "\\d+".r
   val StringLit = "(\\w)*".r
@@ -62,7 +63,7 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
 
   def formula: Parser[Formula] = binary(minPrec) ||| atomic ||| negatedFormula
 
-  def atomic: Parser[Formula] = parenthesized ||| negatedAtom ||| plusAtom ||| atom ||| internalPredicateAtom
+  def atomic: Parser[Formula] = parenthesized ||| negatedAtom ||| plusAtom ||| atom ||| internalPredicateAtom //todo: add function in formula
 
   def parenthesized: Parser[Formula] = "(" ~> formula <~ ")"
 
@@ -162,13 +163,25 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
 
   def plusTerm: Parser[Term] = plusVariable ||| variable ||| constant ||| exclType
 
-  def groundedTerm: Parser[Term] = (constant)
+  def groundedTerm: Parser[Term] = (constant ||| numericIntConstant ||| numericDoubleConstant ||| mixedNumLiteralConstant) //todo: add date and time constraints.
 
   def variable: Parser[VariableOrType] = LowerCaseID ^^ {
     s => VariableOrType(s)
   }
 
+  def mixedNumLiteralConstant: Parser[Constant] = MixedNumLiteralID ^^ {
+    s => Constant(s)
+  }
+
   def constant: Parser[Constant] = UpperCaseID ^^ {
+    s => Constant(s)
+  }
+
+  def numericIntConstant: Parser[Constant] = NumPosInt ^^ {
+    s => Constant(s)
+  }
+
+  def numericDoubleConstant: Parser[Constant] = NumDouble ^^ {
     s => Constant(s)
   }
 
@@ -264,6 +277,12 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
         (r, s) => r ++ s.allVariables
       }
     }
+
+    lazy val allConstant: Set[Constant] = this match {
+      case c: Constant => Set(c)
+      case _ => subterms.foldLeft(Set[Constant]()) { (r, s) => r ++ s.allConstant }
+    }
+
     lazy val allPlusVariables: Seq[PlusVariable] =
       allVariables.filter(_.isInstanceOf[PlusVariable]).map(_.asInstanceOf[PlusVariable]).toSeq
   }
@@ -292,6 +311,14 @@ object MLNParser extends JavaTokenParsers with RegexParsers {
       case PlusAtom(_, _) => Set(this)
       case _ => this.subformulas.foldLeft(Set[Formula]()) {
         _ ++ _.allPredicates
+      }
+    }
+
+    lazy val allConstants: Set[Constant] = this match {
+      case Atom(_, args) => args.foldLeft(Set[Constant]())(_ ++ _.allConstant)
+      case PlusAtom(_, args) => args.foldLeft(Set[Constant]())(_ ++ _.allConstant)
+      case _ => this.subformulas.foldLeft(Set[Constant]()) {
+        _ ++ _.allConstants
       }
     }
 

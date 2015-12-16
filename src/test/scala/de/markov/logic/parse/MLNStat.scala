@@ -12,8 +12,11 @@ object MLNStat {
     //todo: add parameters parsing in order to pass data via params.
 
     val mln_dir = "src/test/data"
-    val mln_raw = "smoking.mln"
-    val db_file = "smoking-train.db"
+    val mln_raw = "msag_probe.mln"
+    val db_file = "msag-data.db"
+
+//    val mln_raw = "smoking.mln"
+//    val db_file = "smoking-train.db"
 
     val mln_exp = expression
     val mln_file = scala.io.Source.fromFile(s"$mln_dir/$mln_raw")
@@ -38,10 +41,27 @@ object MLNStat {
 
 
 
-    val formulas = mln_as_list.filter(e => e.get.isInstanceOf[Formula] && !e.get.isInstanceOf[Atom])
+    val formulas = mln_as_list.filter(e => e.get.isInstanceOf[Formula] && !e.get.isInstanceOf[Atom]).map(_.get.asInstanceOf[Formula])
+
+
+    println("---------------------------")
+    formulas.foreach(formula => {
+
+      println(formula)
+      println(formula.allVariables)
+      println(formula.allPredicates)
+      println(formula.allConstants)
+    })
+
+    println("---------------------------")
+
+
+    val allPredInMLN: List[Formula] = allPredicatesInMLN(formulas)
+
+    println("all predicates: " + allPredInMLN)
 
     /* variable name -> domain*/
-    val varsToDomainNameDictionary: Map[String, String] = assignVariablesToDomainNames(formulas, predicateDefs)
+    val varsToDomainNameDictionary: Map[String, String] = assignVariablesToDomainNames(allPredInMLN.toList, predicateDefs)
 
     val groupedByDomName: Map[String, Map[String, String]] = varsToDomainNameDictionary.groupBy { case (varName, domName) => domName }
 
@@ -58,7 +78,6 @@ object MLNStat {
     val parsed_db = filtered_db.map(MLNParser.parse(db, _)).toList
     parsed_db foreach (x => println("parsed train db: " + x))
 
-    //todo: gathering domain values
     val separateDbAtomsAndFuncs: (List[MLNParser.ParseResult[Any]], List[MLNParser.ParseResult[Any]])
     = parsed_db.partition(_.get.isInstanceOf[DatabaseAtom])
 
@@ -80,40 +99,37 @@ object MLNStat {
 
     allDomains
 
+    //todo:
+    //1. ground MLN with domains
+
 
   }
 
-  def assignVariablesToDomainNames(formulas: List[MLNParser.ParseResult[Expression]], predicateDefs: Map[String, PredicateDefinition]): Map[String, String] = {
-    formulas.foldLeft(Map[String, String]()) {
-      (accumulator, element) => {
-        val parsedFormula: Formula = element.get.asInstanceOf[Formula]
+  def allPredicatesInMLN(formulas: List[Formula]): List[Formula] = {
+    formulas.foldLeft(Set[Formula]()) { (a, e) => a ++ e.allPredicates }.toList
+  }
 
-        val predicates = parsedFormula.allPredicates
-        println(predicates)
+  def assignVariablesToDomainNames(predicates: List[Formula], predicateDefs: Map[String, PredicateDefinition]): Map[String, String] = {
 
-        val singleFormulaVals: Map[String, String] = predicates.foldLeft(Map[String, String]()) { (internAcc, predicate) =>
-
-          val valsToDomain: Map[String, String] = predicate match {
-            case Atom(name, args) => {
-              val predicateDef = if (predicateDefs.contains(name)) predicateDefs.get(name).get
-              val bindings: Seq[(String, String)] = predicateDef match {
-                case Predicate1(predicate, domainName) => {
-                  val variable: String = args.head.toString
-                  Seq(variable -> domainName)
-                }
-                case Predicate2(predicate, domainName1, domainName2) => {
-                  val variable1: String = args.head.toString
-                  val variable2: String = args.tail.head.toString
-                  Seq(variable1 -> domainName1, variable2 -> domainName2)
-                }
-              }
-              bindings.toMap
+    predicates.foldLeft(Map[String, String]()) { (accumulator, predicate) =>
+      val valsToDomain: Map[String, String] = predicate match {
+        case Atom(name, args) => {
+          val predicateDef = if (predicateDefs.contains(name)) predicateDefs.get(name).get
+          val bindings: Set[(String, String)] = predicateDef match {
+            case Predicate1(predicate, domainName) => {
+              val variable: String = args.head.toString
+              Set(variable -> domainName)
+            }
+            case Predicate2(predicate, domainName1, domainName2) => {
+              val variable1: String = args.head.toString
+              val variable2: String = args.tail.head.toString
+              Set(variable1 -> domainName1, variable2 -> domainName2)
             }
           }
-          internAcc ++ valsToDomain
+          bindings.toMap
         }
-        accumulator ++ singleFormulaVals
       }
+      accumulator ++ valsToDomain
     }
   }
 

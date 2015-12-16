@@ -1,0 +1,36 @@
+PublishYear(paperid, pubyear)
+Author(paperid, authorid)
+Affiliation(paperid, affilid)
+SameAffiliation(paperid, paperid)
+SameOriginNames(oname, oname)
+SameOriginNamesByPaperId(paperid, paperid)
+SameNormalNames(nname, nname)
+SameNormalNamesByPaperId(paperid, paperid)
+
+
+
+
+// GENERAL KNOWLEDGE ABOUT STUFF: TRANSITIVITY, REFLEXIVITY, SYMMETRY... hard knowledge, which always valid.
+!Affiliation(id1, a) v !Affiliation(id2, a) v  SameAffiliation(id1, id2).
+!Affiliation(id1, a) v !Affiliation(id2, a) v  SameOriginNamesByPaperId(id1, id2).
+!Affiliation(id1, a) v !Affiliation(id2, a) v  SameNormalNamesByPaperId(id1, id2).
+
+!SameAffiliation(id1, id2) v !SameAffiliation(id2, id3) v SameAffiliation(id1, id3).
+!SameAffiliation(id1, id2) v SameAffiliation(id2, id1).
+
+
+
+
+//3.0 !sameAffiliation(paper1, paper2) v sameNormalNamesByPaperId(paper1, paper2)
+//3.0 !sameNormalNamesByPaperId(paper1, paper2) v sameAffiliation(paper1, paper2)
+//3.0 !sameAffiliation(paper1, paper2) v sameOriginNamesByPaperId(paper1, paper2)
+
+// ISSUE 1: missing values
+
+// rule1: authorid, year | Affiliation
+
+2.0 !Author(paperid1, authorid) v !Author(paperid2, authorid) v !PublishYear(paperid1, pubyear) v !PublishYear(paperid2, pubyear) v Affiliation(paperid1, affiliation) v !Affiliation(paperid2, affiliation) v SameAffiliation(paperid1, paperid2)
+
+2.0 !Author(paperid1, authorid) v !Author(paperid2, authorid) v !PublishYear(paperid1, pubyear) v !PublishYear(paperid2, pubyear) v !Affiliation(paperid1, affiliation) v Affiliation(paperid2, affiliation) v SameAffiliation(paperid1, paperid2)
+
+
