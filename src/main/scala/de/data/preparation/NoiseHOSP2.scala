@@ -17,9 +17,9 @@ import scala.util.Random
 
 /**
 
- *
- * Injects noise into the hosp data set, which is used by NADEEF;
- */
+  *
+  * Injects noise into the hosp data set, which is used by NADEEF;
+  */
 class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val writeTo: String) {
 
   implicit class Crossable[T](xs: Traversable[T]) {
@@ -90,9 +90,9 @@ class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val
        |#!/bin/bash
        |
        |$runners
-        |
+       |
         |cat results/output-data-*.db > results/output-data-hosp-$dataSize-k-noise-$noisePercentage.db
-                                                                                                     |
+       |
                                                                                                      |echo $$?
      """.stripMargin
   }
@@ -102,7 +102,7 @@ class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val
        |#!/bin/bash
        |
        |	   $runners
-        |
+       |
         |echo $$?
      """.stripMargin
   }
@@ -196,8 +196,8 @@ class Hosp2NoiseInjector(val datapath: String, val noisePercentage: Int = 2, val
   }
 
   /**
-   * inserted noise as log list preparation
-   * @param input List of inserted errors line_id: attribute_id */
+    * inserted noise as log list preparation
+    * @param input List of inserted errors line_id: attribute_id */
   def prepareList(input: List[(Long, Int)]): List[String] = {
 
     val grouped: Map[Long, List[(Long, Int)]] = input.groupBy(_._1)
@@ -287,26 +287,26 @@ case class Hosp2Tuple(providerID: String,
     import Util._
     s"""
        |providerNumberH("$idx", "${normalizeGroundAtom(this.providerID)}")
-                                                                          |cityH("$idx", "${normalizeGroundAtom(this.city)}")
-                                                                                                                             |stateH("$idx", "${normalizeGroundAtom(this.state)}")
-                                                                                                                                                                                  |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
-                                                                                                                                                                                                                                           |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
-                                                                                                                                                                                                                                                                                                            |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
-                                                                                                                                                                                                                                                                                                                                                                         |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                        |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |stateAvgH("$idx", "${normalizeGroundAtom(this.stateAvg)}")
+       |cityH("$idx", "${normalizeGroundAtom(this.city)}")
+       |stateH("$idx", "${normalizeGroundAtom(this.state)}")
+       |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
+       |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
+       |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
+       |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
+       |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
+       |stateAvgH("$idx", "${normalizeGroundAtom(this.stateAvg)}")
      """.stripMargin
   }
 
   val createAlchemyAtoms: (Int) => String = (idx) => {
     s"""|providerNumberH($idx, ${normalizeAlchemyAtom(this.providerID)})
-                                                                         |cityH($idx, ${normalizeAlchemyAtom(this.city)})
-                                                                                                                          |stateH($idx, ${normalizeAlchemyAtom(this.state)})
-                                                                                                                                                                             |zipCodeH($idx, ${normalizeAlchemyAtom(this.zipCode)})
-                                                                                                                                                                                                                                    |phoneNumberH($idx, ${normalizeAlchemyAtom(this.phoneNumber)})
-                                                                                                                                                                                                                                                                                                   |conditionH($idx, ${normalizeAlchemyAtom(this.condition)})
-                                                                                                                                                                                                                                                                                                                                                              |measureCodeH($idx, ${normalizeAlchemyAtom(this.measureID)})
-                                                                                                                                                                                                                                                                                                                                                                                                                           |measureNameH($idx, ${normalizeAlchemyAtom(this.measureName)})
+        |cityH($idx, ${normalizeAlchemyAtom(this.city)})
+        |stateH($idx, ${normalizeAlchemyAtom(this.state)})
+        |zipCodeH($idx, ${normalizeAlchemyAtom(this.zipCode)})
+        |phoneNumberH($idx, ${normalizeAlchemyAtom(this.phoneNumber)})
+        |conditionH($idx, ${normalizeAlchemyAtom(this.condition)})
+        |measureCodeH($idx, ${normalizeAlchemyAtom(this.measureID)})
+        |measureNameH($idx, ${normalizeAlchemyAtom(this.measureName)})
 """
       .stripMargin
   }
@@ -401,7 +401,7 @@ object Hosp2RawNoiseInjector extends App {
   def injectToCSV(): Unit = {
     //get log file -> create list of all added noise
     val config = ConfigFactory.load()
-    val noise = Array(2 , 4, 6, 8, 10)
+    val noise = Array(2, 4, 6, 8, 10)
     val dataSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
     val logsDir = config.getString("log.path")
     val hospInputDir = config.getString("data.hosp2.path")
@@ -494,53 +494,53 @@ object AlchemyDBCreator extends App {
 
 }
 
-object DCRulesGenerator extends App{
+object DCRulesGenerator extends App {
 
-  val config=ConfigFactory.load()
+  val config = ConfigFactory.load()
   val noise = Array(2, 4, 6, 8, 10)
   val dataSizes = Array(1, 10, 20, 30, 40, 80, 90, 100)
   val logsDir = config.getString("log.path")
 
-  for(i<-noise; j<-dataSizes){
-    val template=
+  for (i <- noise; j <- dataSizes) {
+    val template =
       s"""|{
-         |    "source" : {
-         |        "type" : "csv",
-         |        "file" : ["./noiselogs/$i/$j/hosp_${j}_k_noise_$i.csv"]
-         |    },
-         |    "rule" : [
-         |        {
-         |			"name" : "FD1",
-         |            "type" : "fd",
-         |            "value" : ["ProviderNumber,|HospitalName,City,State,ZIPCode, CountryName ,PhoneNumber,HospitalType,HospitalOwner,EmergencyService"]
-         |        },
-         |        {
-         |			"name" : "FD2",
-         |            "type" : "fd",
-         |            "value" : ["ZIPCode,|City,State"]
-         |        },
-         |        {
-         |            "name" : "FD3",
-         |            "type" : "fd",
-         |            "value" : ["PhoneNumber,|ZIPCode, City, State"]
-         |        },
-         |        {
-         |            "name" : "FD4",
-         |            "type" : "fd",
-         |            "value" : ["MeasureCode,|MeasureName,Condition"]
-         |        },
-         |        {
-         |            "name" : "FD5",
-         |            "type" : "fd",
-         |            "value" : ["ProviderNumber,MeasureCode,|StateAvg"]
-         |        },
-         |        {
-         |            "name" : "FD6",
-         |            "type" : "fd",
-         |            "value" : ["State,MeasureCode,|StateAvg"]
-         |        }
-         |    ]
-         |}
+          |    "source" : {
+          |        "type" : "csv",
+          |        "file" : ["./noiselogs/$i/$j/hosp_${j}_k_noise_$i.csv"]
+          |    },
+          |    "rule" : [
+          |        {
+          |			"name" : "FD1",
+          |            "type" : "fd",
+          |            "value" : ["ProviderNumber,|HospitalName,City,State,ZIPCode, CountryName ,PhoneNumber,HospitalType,HospitalOwner,EmergencyService"]
+          |        },
+          |        {
+          |			"name" : "FD2",
+          |            "type" : "fd",
+          |            "value" : ["ZIPCode,|City,State"]
+          |        },
+          |        {
+          |            "name" : "FD3",
+          |            "type" : "fd",
+          |            "value" : ["PhoneNumber,|ZIPCode, City, State"]
+          |        },
+          |        {
+          |            "name" : "FD4",
+          |            "type" : "fd",
+          |            "value" : ["MeasureCode,|MeasureName,Condition"]
+          |        },
+          |        {
+          |            "name" : "FD5",
+          |            "type" : "fd",
+          |            "value" : ["ProviderNumber,MeasureCode,|StateAvg"]
+          |        },
+          |        {
+          |            "name" : "FD6",
+          |            "type" : "fd",
+          |            "value" : ["State,MeasureCode,|StateAvg"]
+          |        }
+          |    ]
+          |}
        """.stripMargin
 
     val path: Path = Paths.get(s"$logsDir/$i/$j/dc-hosp-$j-k-noise-$i.json")
