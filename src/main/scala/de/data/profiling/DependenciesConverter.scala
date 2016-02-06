@@ -49,7 +49,7 @@ object Converter extends App {
 
   val papersRawDependencies: List[String] = Source.fromFile(s"$path/$papers/results.txt").getLines().toList
 
-  val rawDependencies: List[String] = authorsPapersRawDependencies:::papersRawDependencies
+  val rawDependencies: List[String] = authorsPapersRawDependencies ::: papersRawDependencies
 
   val fds: List[FunctionalDependency] = rawDependencies.map(d => FunctionalDependency.parse(d).get)
 
@@ -58,9 +58,104 @@ object Converter extends App {
 
 }
 
+object ConverterToNormalizedFD extends App {
+  val config: Config = ConfigFactory.load()
+
+  val path = config.getString("profiled.data.path10M")
+  val paperAuthors = "PaperAuthorAffiliations"
+  val papers = "Papers"
+
+
+  val authorsPapersRawDependencies: List[String] = Source.fromFile(s"$path/$paperAuthors/results.txt").getLines().toList
+
+  val papersRawDependencies: List[String] = Source.fromFile(s"$path/$papers/results.txt").getLines().toList
+
+  val rawDependencies: List[String] = authorsPapersRawDependencies ::: papersRawDependencies
+
+  val fds: List[FunctionalDependency] = rawDependencies.map(d => FunctionalDependency.parse(d).get)
+
+  println("--- normalized ---")
+
+  val normalizedFDs: List[FunctionalDependency] = fds.flatMap(_.normalizeFD)
+
+  normalizedFDs foreach (println)
+
+  println("---rhs stats---")
+  val rhsToDependencies: Map[RHS, List[FunctionalDependency]] = normalizedFDs.groupBy(_.rhs)
+  val rhsToRulesSize: Map[RHS, Int] = rhsToDependencies.map(r => (r._1, r._2.size))
+
+  rhsToRulesSize foreach (println)
+
+  println("---lhs stats---")
+  private val lhsToDependencies: Map[LHS, List[FunctionalDependency]] = normalizedFDs.groupBy(_.lhs)
+  private val lhsToToRulesSize: Map[LHS, Int] = lhsToDependencies.map(l => (l._1, l._2.size))
+
+  lhsToToRulesSize foreach (println)
+
+  private val attributesInLHS: List[(String, Int)] = normalizedFDs.map(_.lhs).flatMap(l => l.part.map(p => (p.name, 1)))
+  private val attributesInLHSToCount: Map[String, Int] = attributesInLHS.groupBy(_._1).map(a => (a._1, a._2.size))
+
+  println("---attr in lhs stats---")
+  attributesInLHSToCount foreach (println)
+
+
+}
+
+case class Predicate(name: String, params: PredicateParameter*)
+
+case class PredicateParameter(param: String, paramType: String)
+
+case class MarkovLogicFormula(fd: FunctionalDependency)
+
+object MarkovLogicFormula {
+  def parse(fdAsString: String): Try[MarkovLogicFormula] = {
+    val fd: FunctionalDependency = FunctionalDependency.parse(fdAsString).get
+    Try(MarkovLogicFormula(fd))
+  }
+
+  def getPredicateByAttributeName(attribute: Attribute): String = {
+    /*[1.Paper ID,2.Author ID] --> [3.Affiliation ID]
+    * paperid(id1,pid), paperid(id2,pid), authorid(id1, aid), authorid(id1, aid) => sameAffiliationId(id1,id2) */
+    attribute.name match {
+      case "1.Paper ID" => ""
+      case "2.Author ID" => "authorID"
+      case "3.Affiliation ID" => ""
+      case "4.Original affiliation name" => ""
+      case "5.Normalized affiliation name" => ""
+      case "6.Author sequence number" => ""
+      case "2.Original paper title" => ""
+      case "3.Normalized paper title" => ""
+      case "4.Paper publish year" => ""
+      case "5.Paper publish date" => ""
+      case "6.Paper Document Object Identifier (DOI)" => ""
+      case "7.Original venue name" => ""
+      case "8.Normalized venue name" => ""
+      case "9.Journal ID mapped to venue name" => ""
+      case "10.Conference series ID mapped to venue name" => ""
+      case "11.Paper rank" => ""
+      case _ => ""
+    }
+
+  }
+}
+
 
 case class FunctionalDependency(lhs: LHS, rhs: RHS) {
   override def toString: String = s"[${lhs.toString}] --> [${rhs.toString}]"
+
+  def isNormalized: Boolean = rhs.part match {
+    case Seq(x) => true
+    case _ => false
+  }
+
+  def normalizeFD: List[FunctionalDependency] = {
+    if (rhs.part.size > 1) {
+      val normalizedFDs: List[FunctionalDependency] =
+        rhs.part.map(p => FunctionalDependency(this.lhs, RHS(p))).toList
+      normalizedFDs
+    }
+    else List(this)
+  }
 }
 
 object FunctionalDependency {
