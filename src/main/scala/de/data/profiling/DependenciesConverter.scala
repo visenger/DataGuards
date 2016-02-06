@@ -108,34 +108,116 @@ case class PredicateParameter(param: String, paramType: String)
 case class MarkovLogicFormula(fd: FunctionalDependency)
 
 object MarkovLogicFormula {
+  val idDef: String = "paperid"
+  val authorIdDef: String = "authorid"
+  val affilIdDef: String = "affilid"
+
+  val idFormula: String = "pid"
+  val authorIdFormula: String = "aid"
+  val affilIdFormula: String = "afid"
+
   def parse(fdAsString: String): Try[MarkovLogicFormula] = {
     val fd: FunctionalDependency = FunctionalDependency.parse(fdAsString).get
     Try(MarkovLogicFormula(fd))
   }
 
-  def getPredicateByAttributeName(attribute: Attribute): String = {
+  /*using Rockit syntax, where asterix (*) denotes observed predicates;*/
+  def getObservedPredicateDefinitionByAttrName(attribute: String): String = {
     /*[1.Paper ID,2.Author ID] --> [3.Affiliation ID]
-    * paperid(id1,pid), paperid(id2,pid), authorid(id1, aid), authorid(id1, aid) => sameAffiliationId(id1,id2) */
-    attribute.name match {
-      case "1.Paper ID" => ""
-      case "2.Author ID" => "authorID"
-      case "3.Affiliation ID" => ""
-      case "4.Original affiliation name" => ""
-      case "5.Normalized affiliation name" => ""
-      case "6.Author sequence number" => ""
-      case "2.Original paper title" => ""
-      case "3.Normalized paper title" => ""
-      case "4.Paper publish year" => ""
-      case "5.Paper publish date" => ""
-      case "6.Paper Document Object Identifier (DOI)" => ""
-      case "7.Original venue name" => ""
-      case "8.Normalized venue name" => ""
-      case "9.Journal ID mapped to venue name" => ""
-      case "10.Conference series ID mapped to venue name" => ""
-      case "11.Paper rank" => ""
+    *  authorid(id1, aid), authorid(id2, aid) => sameAffiliationId(id1,id2) */
+
+    attribute match {
+      //case "1.Paper ID" => "" //paper id will be used as ID for other predicates;
+      case "2.Author ID" => s"*authorID($idDef, $authorIdDef)"
+      case "3.Affiliation ID" => s"*affiliationID($idDef, $affilIdDef)"
+      case "4.Original affiliation name" => s"*originalAffilName($idDef, oname)"
+      case "5.Normalized affiliation name" => s"*normalizedAffilName($idDef, nname)"
+      case "6.Author sequence number" => s"*authorSeqNumber($authorIdDef, seq)"
+      case "2.Original paper title" => s"*originalPaperTitle($idDef, otitle)"
+      case "3.Normalized paper title" => s"*normalizedPaperTitle($idDef, ntitle)"
+      case "4.Paper publish year" => s"*paperPublishYear($idDef, year)"
+      case "5.Paper publish date" => s"*paperPublishDate($idDef, date)"
+      case "6.Paper Document Object Identifier (DOI)" => s"*doi($idDef, docId)"
+      case "7.Original venue name" => s"*originalVenue($idDef, ovenue)"
+      case "8.Normalized venue name" => s"*normalizedVenue($idDef, nvenue)"
+      case "9.Journal ID mapped to venue name" => s"*journalID($idDef, journalid)"
+      case "10.Conference series ID mapped to venue name" => s"*conferenceSeries($idDef, conferenceid)"
+      case "11.Paper rank" => s"*rank($idDef, prank)"
       case _ => ""
     }
 
+  }
+
+  /*[1.Paper ID,2.Author ID] --> [3.Affiliation ID]
+   *  authorid(id1, aid), authorid(id2, aid) => sameAffiliationId(id1,id2) */
+
+  def getObservedPredInFormula(attribute: String): String = {
+    attribute match {
+      //case "1.Paper ID" => "" //paper id will be used as ID for other predicates;
+      case "2.Author ID" => s"!authorID(${idFormula}1, ${authorIdFormula}) v !authorID(${idFormula}2, $authorIdFormula)"
+      case "3.Affiliation ID" => s"!affiliationID(${idFormula}1, $affilIdFormula) v !affiliationID(${idFormula}2, $affilIdFormula)"
+        //todo: finish below
+      case "4.Original affiliation name" => s"originalAffilName($affilIdDef, oname)"
+      case "5.Normalized affiliation name" => s"normalizedAffilName($affilIdDef, nname)"
+      case "6.Author sequence number" => s"authorSeqNumber($authorIdDef, seq)"
+      case "2.Original paper title" => s"originalPaperTitle($idDef, otitle)"
+      case "3.Normalized paper title" => s"normalizedPaperTitle($idDef, ntitle)"
+      case "4.Paper publish year" => s"paperPublishYear($idDef, year)"
+      case "5.Paper publish date" => s"paperPublishDate($idDef, date)"
+      case "6.Paper Document Object Identifier (DOI)" => s"doi($idDef, docId)"
+      case "7.Original venue name" => s"originalVenue($idDef, ovenue)"
+      case "8.Normalized venue name" => s"normalizedVenue($idDef, nvenue)"
+      case "9.Journal ID mapped to venue name" => s"journalID($idDef, journalid)"
+      case "10.Conference series ID mapped to venue name" => s"conferenceSeries($idDef, conferenceid)"
+      case "11.Paper rank" => s"rank($idDef, prank)"
+      case _ => ""
+    }
+  }
+
+  def getHiddenPredicateInFormula(attribute: String): String = {
+    attribute match {
+      //case "2.Author ID" => s"sameAuthor(${authorIdFormula}1, ${authorIdFormula}2)"
+      case "3.Affiliation ID" => s"sameAffiliation(${idFormula}1, ${idFormula}2)"
+      //todo: finish below
+      case "4.Original affiliation name" => s"sameOriginNames(oname, oname)"
+      case "5.Normalized affiliation name" => s"sameNormalizedNames(nname, nname)"
+      case "6.Author sequence number" => ""
+      case "2.Original paper title" => s"sameOriginTitle($idDef, $idDef)"
+      case "3.Normalized paper title" => s"sameNormalizedTitle($idDef, $idDef)"
+      case "4.Paper publish year" => s"samePublishYear($idDef, $idDef)"
+      case "5.Paper publish date" => s"samePublishDate($idDef, $idDef)"
+      case "6.Paper Document Object Identifier (DOI)" => s"sameDOI($idDef, $idDef)"
+      case "7.Original venue name" => s"sameOriginalVenue($idDef, $idDef)"
+      case "8.Normalized venue name" => s"sameNormalizedVenue($idDef, $idDef)"
+      case "9.Journal ID mapped to venue name" => s"sameJournal($idDef, $idDef)"
+      case "10.Conference series ID mapped to venue name" => s"sameConference($idDef, $idDef)"
+      case "11.Paper rank" => s"sameRank($idDef, $idDef)"
+      case _ => ""
+    }
+  }
+
+  def getHiddenPredicateDefinitionByAttrName(attribute: String): String = {
+    /*[1.Paper ID,2.Author ID] --> [3.Affiliation ID]
+    *  authorid(id1, aid), authorid(id2, aid) => sameAffiliationId(id1,id2) */
+
+    attribute match {
+      case "2.Author ID" => s"sameAuthor($authorIdDef, $authorIdDef)"
+      case "3.Affiliation ID" => s"sameAffiliation($idDef, $idDef)"
+      case "4.Original affiliation name" => s"sameOriginNames(oname, oname)"
+      case "5.Normalized affiliation name" => s"sameNormalizedNames(nname, nname)"
+      case "6.Author sequence number" => ""
+      case "2.Original paper title" => s"sameOriginTitle($idDef, $idDef)"
+      case "3.Normalized paper title" => s"sameNormalizedTitle($idDef, $idDef)"
+      case "4.Paper publish year" => s"samePublishYear($idDef, $idDef)"
+      case "5.Paper publish date" => s"samePublishDate($idDef, $idDef)"
+      case "6.Paper Document Object Identifier (DOI)" => s"sameDOI($idDef, $idDef)"
+      case "7.Original venue name" => s"sameOriginalVenue($idDef, $idDef)"
+      case "8.Normalized venue name" => s"sameNormalizedVenue($idDef, $idDef)"
+      case "9.Journal ID mapped to venue name" => s"sameJournal($idDef, $idDef)"
+      case "10.Conference series ID mapped to venue name" => s"sameConference($idDef, $idDef)"
+      case "11.Paper rank" => s"sameRank($idDef, $idDef)"
+      case _ => ""
+    }
   }
 }
 
@@ -155,6 +237,12 @@ case class FunctionalDependency(lhs: LHS, rhs: RHS) {
       normalizedFDs
     }
     else List(this)
+  }
+
+  def usedPredicates: Seq[String] = {
+    val lhsPredicates: Seq[String] = lhs.part.map(_.name)
+    val rhsPredicates: Seq[String] = rhs.part.map(_.name)
+    lhsPredicates ++ rhsPredicates
   }
 }
 
