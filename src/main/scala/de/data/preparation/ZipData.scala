@@ -20,14 +20,14 @@ class ZipData {
       val Array(zip, state) = line.split(",")
       val predicates =
         s"""zipZ(\"$idx\", \"$zip\")
-                                   |stateZ(\"$idx\", \"$state\")
+            |stateZ(\"$idx\", \"$state\")
        """.stripMargin
       predicates
     })
     zipPredicates.toList
   }
 
-  def toAlchemyPredicates: List[String]={
+  def toAlchemyPredicates: List[String] = {
     val zipFile = s"${config.getString("data.zip.path")}/zipcode.csv"
     val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
 
@@ -37,11 +37,12 @@ class ZipData {
       val Array(zip, state) = line.split(",")
 
       state match {
-        case "AL" => { s"""zipZ($idx, $zip)
-                                            |stateZ($idx, $state)
+        case "AL" => {
+          s"""zipZ($idx, $zip)
+              |stateZ($idx, $state)
        """.stripMargin
         }
-        case _ =>""
+        case _ => ""
       }
     }
     zipPredicates.toList
