@@ -1,5 +1,5 @@
 import com.typesafe.config.{Config, ConfigFactory}
-import de.data.profiling.{MarkovLogicProgramm, RHS, FunctionalDependency, LHS}
+import de.data.profiling._
 
 
 import scala.io.Source
@@ -68,6 +68,15 @@ object ConverterToMarkovLogic extends App {
   val programmFromFDs: String = markovLogicProgramm.createProgrammFromFDs
 
   println(programmFromFDs)
+
+//  normalizedFDs.foreach(fd => {
+//    println("-------")
+//    println(s"fd: ${fd.toString}")
+//    val mlFormula: String = MarkovLogicFormula(fd).convertToFormula
+//    println(s"formula: $mlFormula")
+//    println("-------")
+//
+//  })
 
 }
 
