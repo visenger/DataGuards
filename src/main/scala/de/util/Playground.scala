@@ -1,5 +1,7 @@
 package de.util
 
+import com.rockymadden.stringmetric.StringMetric
+import com.rockymadden.stringmetric.similarity.JaroMetric
 import com.typesafe.config.{Config, ConfigFactory}
 import de.data.preparation.{Hosp2Tuple, HospTuple}
 import org.apache.spark.rdd.RDD
@@ -197,11 +199,35 @@ object CombinationsTester extends App {
   val list = List('a, 'b, 'c, 'd)
   val tuples: List[((Symbol, Symbol), Symbol)] = (list cross list cross list).toList
   var i = 1;
-    tuples.foreach(t => {
+  tuples.foreach(t => {
 
-      println (s"${i} $t")
-      i += 1
-    })
+    println(s"${i} $t")
+    i += 1
+  })
+}
+
+object ApproximateMatchTester extends App {
+  val input = Seq("department of computer engineering ege university 35100 bornova izmir turkey",
+    "ege universitesi",
+    "ege university",
+    "ege university department of computer engineering")
+  private val compare: Option[Double] = JaroMetric.compare("dwayne", "duane")
+  println(compare.get)
+
+  val combinations: List[(String, String)] = getPairs(input)
+
+  val default: Double = 0.0
+  for ((x, y) <- combinations) {
+    val jaccard: Double = StringMetric.compareWithJaccard(1)(x.toCharArray, y.toCharArray).getOrElse(default)
+    val jaro: Double = StringMetric.compareWithJaro(x.toCharArray, y.toCharArray).getOrElse(default)
+    val levenstein: Int = StringMetric.compareWithLevenshtein(x.toCharArray, y.toCharArray).getOrElse(0)
+    println(s"[$x] compared to [$y] : jaccard: ${jaccard}, jaro: ${jaro}, levenstein: ${levenstein} ")
+  }
+
+
+  def getPairs(in: Seq[String]): List[(String, String)] = {
+    in.combinations(2).map(x => (x.head, x.tail.head)).toList
+  }
 }
 
 

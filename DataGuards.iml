@@ -119,5 +119,6 @@
     <orderEntry type="library" name="Maven: com.typesafe:config:1.2.1" level="project" />
     <orderEntry type="library" name="Maven: org.scalatest:scalatest_2.10:3.0.0-M12" level="project" />
     <orderEntry type="library" name="Maven: org.scalactic:scalactic_2.10:3.0.0-M12" level="project" />
+    <orderEntry type="library" name="Maven: com.rockymadden.stringmetric:stringmetric-core_2.10:0.27.3" level="project" />
   </component>
 </module>
