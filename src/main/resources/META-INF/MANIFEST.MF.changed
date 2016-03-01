@@ -42,5 +42,5 @@ Class-Path: tachyon-client-0.5.0.jar netlib-java-0.9.3.jar commons-io-
  e-1.0.4.jar jline-0.9.94.jar guava-14.0.1.jar jetty-servlet-8.1.14.v2
  0131031.jar jetty-server-8.1.14.v20131031.jar scala-library-2.10.4.ja
  r
-Main-Class: de.result.evaluation.Tester
+Main-Class: de.result.evaluation.MSAGEvaluator
 

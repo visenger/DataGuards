@@ -55,11 +55,11 @@ object ConverterToMarkovLogic extends App {
   val rawDependencies: List[String] = authorsPapersRawDependencies
   val fds: List[FunctionalDependency] = rawDependencies.map(d => FunctionalDependency.parse(d).get)
 
-  println("--- normalization ---")
+  //println("--- normalization ---")
 
   val normalizedFDs: List[FunctionalDependency] = fds.flatMap(_.normalizeFD)
 
-  normalizedFDs foreach (println)
+  //normalizedFDs foreach (println)
 
   println("--- Markov Logic ---")
 

@@ -1,5 +1,5 @@
 <project>
-    <property name="artifact.output.path" value="out/artifacts/DataGuards_jar2"></property>
+    <property name="artifact.output.path" value="out/artifacts/DataGuards_jar4"></property>
     <target name="remove-signatures">
         <exec executable="zip">
             <arg value="-d"/>

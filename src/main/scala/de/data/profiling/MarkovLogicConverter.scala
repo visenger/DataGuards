@@ -112,7 +112,7 @@ object MarkovLogicFormula {
   val authorIdFormula: String = "aid"
   val affilIdFormula: String = "afid"
 
-  val affilIDPredicate: String = s"!affiliationID(${authorIdFormula}, ${affilIdFormula}1) v !affiliationID(${authorIdFormula}, ${affilIdFormula}2)"
+  val affilIDPredicate: String = s"!affiliation(${idFormula}, ${affilIdFormula}1) v !affiliation(${idFormula}, ${affilIdFormula}2)"
 
   def parse(fd: FunctionalDependency): Try[MarkovLogicFormula] = {
     Try(MarkovLogicFormula(fd))
@@ -131,11 +131,11 @@ object MarkovLogicFormula {
 
     attribute match {
       //case "1.Paper ID" => "" //paper id will be used as ID for other predicates;
-      case "2.Author ID" => s"*authorID($idDef, $authorIdDef)"
-      case "3.Affiliation ID" => s"*affiliationID($authorIdDef, $affilIdDef)"
-      case "4.Original affiliation name" => s"*originalAffilName($affilIdDef, oname)"
-      case "5.Normalized affiliation name" => s"*normalizedAffilName($affilIdDef, nname)"
-      case "6.Author sequence number" => s"*authorSeqNumber($authorIdDef, seq)"
+      case "2.Author ID" => s"*author($idDef, $authorIdDef)"
+      case "3.Affiliation ID" => s"*affiliation($idDef, $affilIdDef)"
+      case "4.Original affiliation name" => s"*originAffiliationName($idDef, oname)"
+      case "5.Normalized affiliation name" => s"*normalAffiliationName($idDef, nname)"
+      case "6.Author sequence number" => s"*authorSeqNumber($idDef, seq)"
       case "2.Original paper title" => s"*originalPaperTitle($idDef, otitle)"
       case "3.Normalized paper title" => s"*normalizedPaperTitle($idDef, ntitle)"
       case "4.Paper publish year" => s"*paperPublishYear($idDef, year)"
@@ -155,15 +155,18 @@ object MarkovLogicFormula {
    *  authorid(id1, aid), authorid(id2, aid) => sameAffiliationId(id1,id2) */
 
   def getObservedPredInFormula(attribute: String): String = {
-    val authorIDPredicate: String = s"!authorID(${idFormula}1, ${authorIdFormula}1) v !authorID(${idFormula}2, ${authorIdFormula}2)"
-    //val affilIDPredicate: String = s"!affiliationID(${authorIdFormula}, ${affilIdFormula}1) v !affiliationID(${authorIdFormula}, ${affilIdFormula}2)"
+    val authorPredicate: String = s"!author(${idFormula}1, ${authorIdFormula}1) v !author(${idFormula}2, ${authorIdFormula}2)"
+    //val affilIDPredicate: String = s"!affiliation(${authorIdFormula}, ${affilIdFormula}1) v !affiliation(${authorIdFormula}, ${affilIdFormula}2)"
     attribute match {
       //case "1.Paper ID" => "" //paper id will be used as ID for other predicates;
-      case "2.Author ID" => s"!authorID(${idFormula}1, ${authorIdFormula}) v !authorID(${idFormula}2, $authorIdFormula)"
-      case "3.Affiliation ID" => s"$authorIDPredicate v !affiliationID(${authorIdFormula}1, $affilIdFormula) v !affiliationID(${authorIdFormula}2, $affilIdFormula)"
-      case "4.Original affiliation name" => s"$affilIDPredicate v !originalAffilName(${affilIdFormula}1, oname) v !originalAffilName(${affilIdFormula}2, oname)"
-      case "5.Normalized affiliation name" => s"$affilIDPredicate v !normalizedAffilName(${affilIdFormula}1, nname) v !normalizedAffilName(${affilIdFormula}2, nname)"
-      case "6.Author sequence number" => s"!authorSeqNumber(${authorIdFormula}, seq) " // s"!authorSeqNumber(${authorIdFormula}1, seq) v !authorSeqNumber(${authorIdFormula}2, seq)"
+      case "2.Author ID" => s"!author(${idFormula}1, ${authorIdFormula}) v !author(${idFormula}2, $authorIdFormula)"
+      //previous case "3.Affiliation ID" => s"$authorPredicate v !affiliation(${idFormula}1, $affilIdFormula) v !affiliation(${idFormula}2, $affilIdFormula)"
+      case "3.Affiliation ID" => s"!affiliation(${idFormula}1, $affilIdFormula) v !affiliation(${idFormula}2, $affilIdFormula)"
+      //previous case "4.Original affiliation name" => s"$affilIDPredicate v !originAffiliationName(${affilIdFormula}1, oname) v !originAffiliationName(${affilIdFormula}2, oname)"
+      case "4.Original affiliation name" => s"!originAffiliationName(${idFormula}1, oname) v !originAffiliationName(${idFormula}2, oname)"
+      //previous case "5.Normalized affiliation name" => s"$affilIDPredicate v !normalAffiliationName(${affilIdFormula}1, nname) v !normalAffiliationName(${affilIdFormula}2, nname)"
+      case "5.Normalized affiliation name" => s"!normalAffiliationName(${idFormula}1, nname) v !normalAffiliationName(${idFormula}2, nname)"
+      case "6.Author sequence number" => s"!authorSeqNumber(${idFormula}1, seq1) v !authorSeqNumber(${idFormula}2, seq2) " // s"!authorSeqNumber(${authorIdFormula}1, seq) v !authorSeqNumber(${authorIdFormula}2, seq)"
 
       case "2.Original paper title" => s"!originalPaperTitle(${idFormula}1, otitle) v !originalPaperTitle(${idFormula}2, otitle)"
       case "3.Normalized paper title" => s"!normalizedPaperTitle(${idFormula}1, ntitle) v !normalizedPaperTitle(${idFormula}2, ntitle)"
@@ -188,11 +191,11 @@ object MarkovLogicFormula {
       case "2.Author ID" => s"sameAuthor($authorIdDef, $authorIdDef)"
       case "3.Affiliation ID" => s"sameAffiliation($idDef, $idDef)"
       case "4.Original affiliation name" =>
-        s"""*affiliationID($authorIdDef, $affilIdDef)
+        s"""*affiliation($idDef, $affilIdDef)
             |sameOriginNames(oname, oname)""".stripMargin
       case "5.Normalized affiliation name" =>
-        s"""*affiliationID($authorIdDef, $affilIdDef)
-            |sameNormalizedNames(nname, nname)""".stripMargin
+        s"""*affiliation($idDef, $affilIdDef)
+            |sameNormalNames(nname, nname)""".stripMargin
       case "6.Author sequence number" => ""
       case "2.Original paper title" => s"sameOriginTitle($idDef, $idDef)"
       case "3.Normalized paper title" => s"sameNormalizedTitle($idDef, $idDef)"
@@ -216,8 +219,8 @@ object MarkovLogicFormula {
       //todo: sameAffiliation should have two hidden predicates 1.for paper id and 2.for affiliation id ??
       case "3.Affiliation ID" => s"sameAffiliation(${idFormula}1, ${idFormula}2)"
 
-      case "4.Original affiliation name" => s"$affilIDPredicate v !originalAffilName(${affilIdFormula}1, oname1) v !originalAffilName(${affilIdFormula}2, oname2) v sameOriginNames(oname1, oname2)"
-      case "5.Normalized affiliation name" => s"$affilIDPredicate v !normalizedAffilName(${affilIdFormula}1, nname1) v !normalizedAffilName(${affilIdFormula}2, nname2) v sameNormalizedNames(nname1, nname2)"
+      case "4.Original affiliation name" => s"!originAffiliationName(${idFormula}1, oname1) v !originAffiliationName(${idFormula}2, oname2) v sameOriginNames(oname1, oname2)"
+      case "5.Normalized affiliation name" => s"!normalAffiliationName(${idFormula}1, nname1) v !normalAffiliationName(${idFormula}2, nname2) v sameNormalNames(nname1, nname2)"
       case "6.Author sequence number" => ""
       case "2.Original paper title" => s"sameOriginTitle(${idFormula}1, ${idFormula}2)"
       case "3.Normalized paper title" => s"sameNormalizedTitle(${idFormula}1, ${idFormula}2)"

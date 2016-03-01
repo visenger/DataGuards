@@ -10,8 +10,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 /**
- * Created by larysa  25.03.14
- */
+  * Created by larysa  25.03.14
+  */
 object Util {
 
   def writeToFile(db_atoms: List[String], fileName: String) {
@@ -66,8 +66,8 @@ object Util {
     _.replaceAll("\"", "_").replaceAll("\\(", "_").replaceAll("\\)", "_").replaceAll(",", "_")
   }
 
-  def normalizeAlchemyAtom: String => String ={
-    _.replaceAll("\\s+","_" ).replaceAll("\"", "_").replaceAll("\\(", "_").replaceAll("\\)", "_").replaceAll(",", "_").replaceAll("/","_").replaceAll("&","_").replaceAll("#","_").replaceAll(";","_").capitalize
+  def normalizeAlchemyAtom: String => String = {
+    _.replaceAll("\\s+", "_").replaceAll("\"", "_").replaceAll("\\(", "_").replaceAll("\\)", "_").replaceAll(",", "_").replaceAll("/", "_").replaceAll("&", "_").replaceAll("#", "_").replaceAll(";", "_").capitalize
   }
 
   def playSound {
@@ -83,9 +83,9 @@ object Util {
 
 
   /**
-   * Loads a resource as stream. This returns either a resource in the classpath,
-   * or in case no such named resource exists, from the file system.
-   */
+    * Loads a resource as stream. This returns either a resource in the classpath,
+    * or in case no such named resource exists, from the file system.
+    */
   def getStreamFromClassPathOrFile(name: String): InputStream = {
     val is: InputStream = getClass.getClassLoader.getResourceAsStream(name)
     if (is == null) {

@@ -28,13 +28,14 @@ object MSAGEvaluator {
       folderId = args(1)
       id = args(2)
     } else {
-      path = ConfigFactory.load.getString("data.msag.path")
+      path = s"$path/local"// ConfigFactory.load.getString("data.msag.path")
       folderId = "0"
-      id = "19525FF1"
+      id = "14222CBD"
     }
 
     val regexList: List[String] = Source.fromFile(s"$path/$folderId/$id/regex-$id.txt").getLines().toList
 
+    //todo: handle the case when output is empty
     val toEvalList: List[String] = Source.fromFile(s"$path/$folderId/$id/output-$id.db").getLines().toList
 
     val allWeNeed: List[List[String]] = for (r <- regexList) yield {
@@ -47,6 +48,8 @@ object MSAGEvaluator {
 
     val distinct: List[MarkovLogicPredicate] = markovLogicPredicates.distinct
 
+    //Util.writeToFile(distinct.map(_.toString), s"$path/$folderId/$id/distinct-output-$id.txt")
+
     //println("markovLogicPredicates found total = " + markovLogicPredicates.size)
 
 
@@ -56,8 +59,9 @@ object MSAGEvaluator {
 
     /*check against gold standard: */
 
+    val referencePredicates: Iterator[String] = Source.fromFile(s"$path/$folderId/$id/reference-$id.txt").getLines().filter(!_.isEmpty)
     val reference: List[MarkovLogicPredicate] =
-      Source.fromFile(s"$path/$folderId/$id/reference-$id.txt").getLines().map(MarkovLogicPredicate.apply).toList
+      referencePredicates.map(MarkovLogicPredicate.apply).toSet.toList
     val correct: Int = reference.size
 
     val intersectPredicates: List[MarkovLogicPredicate] = reference.intersect(distinct)
@@ -119,7 +123,6 @@ class MarkovLogicPredicate(val name: String, val firstArg: String, val secondArg
   }
 
   override def equals(that: scala.Any): Boolean = {
-    //todo: finish this: two predicates are equal if ...
     //predicate(a,b) should be equal to predicate(a, b) or predicate(b, a)
     that match {
       case that: MarkovLogicPredicate => {
@@ -237,7 +240,6 @@ object ResultAnalyser extends App {
   val f1Lines: List[F1Line] = input.map(F1Line.apply(_)).toList
 
 
-
   private val converterToEdgesStat: (String => EdgesStat) = (e) => {
     val Array(forlderNr, authorId, edgesTotal, removed) = e.split(",")
     EdgesStat(forlderNr, authorId, edgesTotal.toInt, removed.toInt)
@@ -293,4 +295,12 @@ object TesterEverything {
 
     })
   }
+}
+
+object TesterMLRegex extends App {
+  val ExpectedPredicate = "(.+)\\(\"(.+)\", \"(.+)\"\\)".r
+
+  val raw = s"""sameAffiliation("0B9306A2", "090E822A")"""
+  val ExpectedPredicate(predicateName, firstArg, secondArg) = raw
+  println(s"predicate name: $predicateName, first arg: $firstArg, second arg: $secondArg")
 }
