@@ -1,7 +1,8 @@
 package de.util
 
 import com.rockymadden.stringmetric.StringMetric
-import com.rockymadden.stringmetric.similarity.JaroMetric
+import com.rockymadden.stringmetric.phonetic.{MetaphoneMetric, RefinedSoundexMetric, RefinedNysiisMetric}
+import com.rockymadden.stringmetric.similarity.{RatcliffObershelpMetric, JaroMetric}
 import com.typesafe.config.{Config, ConfigFactory}
 import de.data.preparation.{Hosp2Tuple, HospTuple}
 import org.apache.spark.rdd.RDD
@@ -206,22 +207,127 @@ object CombinationsTester extends App {
   })
 }
 
-object ApproximateMatchTester extends App {
-  val input = Seq("department of computer engineering ege university 35100 bornova izmir turkey",
-    "ege universitesi",
-    "ege university",
-    "ege university department of computer engineering")
-  private val compare: Option[Double] = JaroMetric.compare("dwayne", "duane")
-  println(compare.get)
+object MsagData {
+  val normNames1 = Seq(
+    s"department of computer engineering ege university 35100 bornova izmir turkey",
+    s"ege universitesi",
+    s"ege university",
+    s"ege university department of computer engineering")
 
-  val combinations: List[(String, String)] = getPairs(input)
+  val normNames2 = Seq(
+    s"chinese academy of sciences",
+    s"national institute of neurological disorders and stroke",
+    s"capital medical university",
+    s"columbia university",
+    s"nanjing medical university",
+    s"tongji university",
+    s"yale university school of medicine",
+    s"1synaptic transmission section national institute of neurological disorders and stroke bethesda maryland 20892 and",
+    s"fudan university",
+    s"nih",
+    s"school of life science and technology tongji university shanghai china",
+    s"second military medical university",
+    s"shanghai center for systems biomedicine laboratory of systems biomedicine of ministry of education shanghai jiao tong university",
+    s"tongji university shanghai"
+  )
+
+  val originNames = Seq(s"Ege·Üniversitesi",
+    s"Ege·University_·Department·of·Computer·Engineering_·35100·Bornova_·Izmir_·Turkey|||Ege·University_·Department·of·Computer·Engineering_·35100·Bornova_·Izmir_·Turkey",
+    s"Ege·University|Department·of·Computer·Engineering|||Ege·University|Department·of·Computer·Engineering|||Ege·University·Department·of·Computer·Engineering·Bornova·35100·Izmir·Turkey|||Ege·Uni",
+    s"Ege·University|Department·of·Computer·Engineering|||Ege·University_·Department·of·Computer·Engineering_·35100·Bornova_·Izmir_·Turkey|||Ege·University_·Department·of·Computer·Engineering_·351",
+    s"Ege·University|||CEA",
+    s"Ege·University|||CEA·LIST",
+    s"Ege·University_·Computer·Engineering·Department_·Universite·cad.·35100_·Bornova_·Izmir_·Turkey",
+    s"Ege·University",
+    s"Department·of·Computer·Engineering|Ege·University|Universita·di·Bologna",
+    s"Department·of·Computer·Engineering_·Ege·University_·35100·Bornova_·Izmir_·Turkey|||Department·of·Computer·Engineering_·Ege·University_·35100·Bornova_·Izmir_·Turkey|||Department·of·Computer·E",
+    s"Ege·University_·Department·of·Computer·Engineering_·35100·Bornova_·Izmir·Turkey|||Ege·University_·Department·of·Computer·Engineering_·35100·Bornova_·Izmir·Turkey",
+    s"Department·of·Computer·Engineering_·Ege·University_·35100·Bornova_·Izmir_·Turkey|||Department·of·Computer·Engineering_·Ege·University_·35100·Bornova_·Izmir_·Turkey|||Ege·University|Department")
+
+}
+
+object HospData {
+
+  val telNumbers = Seq("2562358900", "2562358900typo")
+
+  val stateAvg = Seq(
+    s"AL_AMI-2",
+    s"AL_AMI-3",
+    s"AL_AMI-4",
+    s"AL_AMI-5",
+    s"AL_AMI-7A",
+    s"AL_AMI-8Atypo",
+    s"AL_CAC-1",
+    s"AL_CAC-2",
+    s"AL_CAC-3",
+    s"AL_HF-1",
+    s"AL_HF-2",
+    s"AL_HF-3",
+    s"AL_HF-4"
+  )
+
+  val conditionTopValues = Seq(
+    s"Pneumonia",
+    s"Surgical Infection Prevention",
+    s"Heart Attack",
+    s"Heart Failure",
+    s"Heart Attacktypo",
+    s"Children&#8217;s Asthma Care",
+    s"Surgical Infection Preventiontypo",
+    s"Children&#8217;s Asthma Caretypo"
+  )
+
+  val measureNameTopValues = Seq(
+
+    s"Children Who Received Reliever Medication While Hospitalized for Asthma",
+    s"Children Who Received Systemic Corticosteroid Medication (oral and IV Medication That Reduces Inflammation and Controls Symptoms) While Hospitalized for Asthma",
+    s"Children and their Caregivers Who Received a Home Management Plan of Care Document While Hospitalized for Asthmatypo",
+    s"Heart Attack Patients Given ACE Inhibitor or ARB for Left Ventricular Systolic Dysfunction (LVSD)",
+    s"Heart Attack Patients Given Aspirin at Arrival",
+    s"Heart Attack Patients Given Aspirin at Discharge",
+    s"Heart Attack Patients Given Beta Blocker at Discharge",
+    s"Heart Attack Patients Given Fibrinolytic Medication Within 30 Minutes Of Arrival",
+    s"Heart Attack Patients Given PCI Within 90 Minutes Of Arrival",
+    s"Heart Attack Patients Given Smoking Cessation Advice/Counseling",
+    s"Heart Failure Patients Given ACE Inhibitor or ARB for Left Ventricular Systolic Dysfunction (LVSD)",
+    s"Heart Failure Patients Given Discharge Instructions",
+    s"Heart Failure Patients Given Smoking Cessation Advice/Counseling",
+    s"Heart Failure Patients Given an Evaluation of Left Ventricular Systolic (LVS) Function"
+
+  )
+}
+
+object ApproximateMatchTester extends App {
+
+  //  private val compare: Option[Double] = JaroMetric.compare("dwayne", "duane")
+  //  println(compare.get)
+
+  val combinations: List[(String, String)] = getPairs(MsagData.normNames1)
 
   val default: Double = 0.0
+
+  val header = s"datapointX, datapointY:, jaccard:, jaroWinkler:, levenstein:, diceSorensen:, ratcliffOber:, overlap:"
+  println(header)
   for ((x, y) <- combinations) {
     val jaccard: Double = StringMetric.compareWithJaccard(1)(x.toCharArray, y.toCharArray).getOrElse(default)
-    val jaro: Double = StringMetric.compareWithJaro(x.toCharArray, y.toCharArray).getOrElse(default)
+    val overlap: Double = StringMetric.compareWithOverlap(3)(x.toCharArray, y.toCharArray).getOrElse(default)
+    val jaroWinkler: Double = StringMetric.compareWithJaroWinkler(x.toCharArray, y.toCharArray).getOrElse(default)
+    val diceSorensen: Double = StringMetric.compareWithDiceSorensen(1)(x.toCharArray, y.toCharArray).getOrElse(default)
     val levenstein: Int = StringMetric.compareWithLevenshtein(x.toCharArray, y.toCharArray).getOrElse(0)
-    println(s"[$x] compared to [$y] : jaccard: ${jaccard}, jaro: ${jaro}, levenstein: ${levenstein} ")
+    val ratcliffOber: Double = RatcliffObershelpMetric.compare(x.toCharArray, y.toCharArray).getOrElse(default)
+
+    val row: String = s"[$x],[$y],${jaccard},${jaroWinkler},${levenstein},${diceSorensen},${ratcliffOber},${overlap}"
+    println(row)
+
+    /* phonetic algorithms*/
+    //    val nysiis: Boolean = StringMetric.compareWithNysiis(x.toCharArray, y.toCharArray).getOrElse(false)
+    //    val refinedNYSIIS: Boolean = RefinedNysiisMetric.compare(x, y).getOrElse(false)
+    //    val refinedSoundex: Boolean = RefinedSoundexMetric.compare(x, y).getOrElse(false)
+    //    val metaphone: Boolean = MetaphoneMetric.compare(x.toCharArray, y.toCharArray).getOrElse(false)
+
+
+    //    println("phonetic")
+    //    println(s" nysiis: ${nysiis}, refined nysiis: ${refinedNYSIIS}, refined soundex: ${refinedSoundex}, metaphone: ${metaphone}")
   }
 
 
