@@ -10,8 +10,8 @@ import scala.collection.immutable.Iterable
 import scala.util.Random
 
 /**
- * Processing TPCH data set. This class introduces noise to TPCH. Result is written to the specified folder.
- */
+  * Processing TPCH data set. This class introduces noise to TPCH. Result is written to the specified folder.
+  */
 /*The reason for extending the class with Serializable
 http://stackoverflow.com/questions/22592811/scala-spark-task-not-serializable-java-io-notserializableexceptionon-when*/
 
@@ -43,9 +43,9 @@ class TpchNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
       })
 
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-      import sqlContext.createSchemaRDD
-      customers.registerTempTable("customers")
-      orders.registerTempTable("orders")
+      import sqlContext.implicits._
+      customers.toDF().registerTempTable("customers")
+      orders.toDF().registerTempTable("orders")
 
       val jointTables = sqlContext.sql("SELECT c.custKey, c.name, c.addr, c.natKey, c.phone, c.acc, c.mrkt,  " +
         "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
@@ -223,23 +223,23 @@ case class JointCustOrder(var custKey: String,
     //         """.stripMargin
 
     s"""custKey("$idx", "${normalizeGroundAtom(this.custKey)}")
-                                                               |name("$idx", "${normalizeGroundAtom(this.name)}")
-                                                                                                                 |addr("$idx", "${normalizeGroundAtom(this.addr)}")
-                                                                                                                                                                   |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
-                                                                                                                                                                                                                         |phone("$idx", "${normalizeGroundAtom(this.phone)}")
-                                                                                                                                                                                                                                                                             |acc("$idx", "${normalizeGroundAtom(this.acc)}")
-                                                                                                                                                                                                                                                                                                                             |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
-                                                                                                                                                                                                                                                                                                                                                                               |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
+        |name("$idx", "${normalizeGroundAtom(this.name)}")
+        |addr("$idx", "${normalizeGroundAtom(this.addr)}")
+        |natKey("$idx", "${normalizeGroundAtom(this.natKey)}")
+        |phone("$idx", "${normalizeGroundAtom(this.phone)}")
+        |acc("$idx", "${normalizeGroundAtom(this.acc)}")
+        |mrkt("$idx", "${normalizeGroundAtom(this.mrkt)}")
+        |orderKey("$idx", "${normalizeGroundAtom(this.orderKey)}")
      """.stripMargin
   }
 
   val dictionary: String =
     s"""name \t 2
-       |addr \t 3
-       |natKey \t 4
-       |phone \t 5
-       |acc \t 6
-       |mrkt \t 7
+        |addr \t 3
+        |natKey \t 4
+        |phone \t 5
+        |acc \t 6
+        |mrkt \t 7
    """.stripMargin
   /*
   //CFD

@@ -3,7 +3,7 @@ package de.data.preparation
 import com.typesafe.config.{Config, ConfigFactory}
 import de.util.Util
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.expressions.Row
+import org.apache.spark.sql.Row
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.io.Source
@@ -44,10 +44,11 @@ object MSAGWrangler {
     })
 
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-    import sqlContext.createSchemaRDD
+    //import sqlContext.createSchemaRDD
+    import sqlContext.implicits._
 
-    authorTuples.registerTempTable("authors")
-    papersByAuthor.registerTempTable("papers")
+    authorTuples.toDF().registerTempTable("authors")
+    papersByAuthor.toDF().registerTempTable("papers")
 
     val query = sqlContext.sql(
       s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
@@ -73,7 +74,7 @@ object MSAGWrangler {
     //    val filteredNotNull: RDD[Row] =
     //      query.map(r => Row(r(0), r(1), r(2), r(3), r(4), r(5), r(6), r(7))).filter(r => r.getString(2) != "")
 
-    val groupedByAuthor: RDD[(Any, Iterable[Row])] = query.groupBy(r => r(1))
+    val groupedByAuthor/*: RDD[(Any, Iterable[Row])]*/ = query.collect().groupBy(r => r(1))
 
     val authorsWithManyPubs = groupedByAuthor.filter(g => {
       // who wrote more than 10 publications at the same organisation/affiliation
@@ -83,9 +84,9 @@ object MSAGWrangler {
     })
 
     //todo: use this sample when running on cluster;
-    val sampleAuthors: RDD[(Any, Iterable[Row])] = authorsWithManyPubs.sample(false, 0.05, System.currentTimeMillis())
+    //val sampleAuthors: RDD[(Any, Iterable[Row])] = authorsWithManyPubs.sample(false, 0.05, System.currentTimeMillis())
 
-    val noisyData: RDD[LogNoisyData] = authorsWithManyPubs.map(a => {
+    val noisyData/*: RDD[LogNoisyData]*/ = authorsWithManyPubs.map(a => {
       //todo: Achtung! to many thing happening here -> smells
       val authorId: String = a._1.asInstanceOf[String]
       val papersByAuthor: List[Row] = a._2.toList /* clean data */
@@ -119,7 +120,7 @@ object MSAGWrangler {
     // val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
     val pathForData = path
 
-    val withIndex: RDD[(LogNoisyData, Long)] = noisyData.zipWithIndex
+    val withIndex/*: RDD[(LogNoisyData, Long)]*/ = noisyData.zipWithIndex
 
     //    val count: Long = withIndex.count()
     //    println("count = " + count)

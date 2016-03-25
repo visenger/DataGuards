@@ -1,13 +1,17 @@
 package de.util
 
+import com.google.common.base.Strings
 import com.rockymadden.stringmetric.StringMetric
-import com.rockymadden.stringmetric.phonetic.{MetaphoneMetric, RefinedSoundexMetric, RefinedNysiisMetric}
 import com.rockymadden.stringmetric.similarity.{RatcliffObershelpMetric, JaroMetric}
 import com.typesafe.config.{Config, ConfigFactory}
-import de.data.preparation.{Hosp2Tuple, HospTuple}
+import de.data.preparation.{Papers, PaperAuthorAffil, Hosp2Tuple, HospTuple}
+import org.apache.spark.mllib.linalg.{Vectors, SparseVector}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.types.{DataTypes, DataType, StructField, StructType}
+import org.apache.spark.sql.{Row, GroupedData, DataFrame}
 import org.apache.spark.{SparkContext, SparkConf}
-import org.apache.spark.SparkContext._
+import org.apache.spark.sql.functions._
+
 
 import scala.util.Random
 
@@ -46,9 +50,9 @@ object Playground {
     })
 
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-    import sqlContext.createSchemaRDD
-    customers.registerTempTable("customers")
-    orders.registerTempTable("orders")
+    import sqlContext.implicits._
+    customers.toDF().registerTempTable("customers")
+    orders.toDF().registerTempTable("orders")
 
     val jointTables = sqlContext.sql("SELECT c.custKey, c.name, c.addr, c.natKey, c.phone, c.acc, c.mrkt,  " +
       "o.orderKey, o.orderStatus, o.totalPrice, o.orderDate, o.orderPriority, o.clerk " +
@@ -199,10 +203,10 @@ object CombinationsTester extends App {
 
   val list = List('a, 'b, 'c, 'd)
   val tuples: List[((Symbol, Symbol), Symbol)] = (list cross list cross list).toList
-  var i = 1;
+  var i = 1
   tuples.foreach(t => {
 
-    println(s"${i} $t")
+    println(s"$i $t")
     i += 1
   })
 }
@@ -304,35 +308,327 @@ object ApproximateMatchTester extends App {
 
   val combinations: List[(String, String)] = getPairs(MsagData.normNames1)
 
-  val default: Double = 0.0
+  computeSimilarities(combinations)
 
-  val header = s"datapointX, datapointY:, jaccard:, jaroWinkler:, levenstein:, diceSorensen:, ratcliffOber:, overlap:"
-  println(header)
-  for ((x, y) <- combinations) {
-    val jaccard: Double = StringMetric.compareWithJaccard(1)(x.toCharArray, y.toCharArray).getOrElse(default)
-    val overlap: Double = StringMetric.compareWithOverlap(3)(x.toCharArray, y.toCharArray).getOrElse(default)
-    val jaroWinkler: Double = StringMetric.compareWithJaroWinkler(x.toCharArray, y.toCharArray).getOrElse(default)
-    val diceSorensen: Double = StringMetric.compareWithDiceSorensen(1)(x.toCharArray, y.toCharArray).getOrElse(default)
-    val levenstein: Int = StringMetric.compareWithLevenshtein(x.toCharArray, y.toCharArray).getOrElse(0)
-    val ratcliffOber: Double = RatcliffObershelpMetric.compare(x.toCharArray, y.toCharArray).getOrElse(default)
+  def computeSimilarities(pairs: List[(String, String)]): List[String] = {
+    val default: Double = 0.0
 
-    val row: String = s"[$x],[$y],${jaccard},${jaroWinkler},${levenstein},${diceSorensen},${ratcliffOber},${overlap}"
-    println(row)
+    val header = s"datapointX, datapointY:, jaccard:, jaroWinkler:, levenstein:, diceSorensen:, ratcliffOber:, overlap:"
+    println(header)
+    val similarities: List[String] = for ((x, y) <- pairs) yield {
+      val jaccard: Double = StringMetric.compareWithJaccard(1)(x.toCharArray, y.toCharArray).getOrElse(default)
+      val overlap: Double = StringMetric.compareWithOverlap(3)(x.toCharArray, y.toCharArray).getOrElse(default)
+      val jaroWinkler: Double = StringMetric.compareWithJaroWinkler(x.toCharArray, y.toCharArray).getOrElse(default)
+      val diceSorensen: Double = StringMetric.compareWithDiceSorensen(1)(x.toCharArray, y.toCharArray).getOrElse(default)
+      val levenstein: Int = StringMetric.compareWithLevenshtein(x.toCharArray, y.toCharArray).getOrElse(0)
+      val ratcliffOber: Double = RatcliffObershelpMetric.compare(x.toCharArray, y.toCharArray).getOrElse(default)
 
-    /* phonetic algorithms*/
-    //    val nysiis: Boolean = StringMetric.compareWithNysiis(x.toCharArray, y.toCharArray).getOrElse(false)
-    //    val refinedNYSIIS: Boolean = RefinedNysiisMetric.compare(x, y).getOrElse(false)
-    //    val refinedSoundex: Boolean = RefinedSoundexMetric.compare(x, y).getOrElse(false)
-    //    val metaphone: Boolean = MetaphoneMetric.compare(x.toCharArray, y.toCharArray).getOrElse(false)
-
-
-    //    println("phonetic")
-    //    println(s" nysiis: ${nysiis}, refined nysiis: ${refinedNYSIIS}, refined soundex: ${refinedSoundex}, metaphone: ${metaphone}")
+      val row: String = s"[$x],[$y],${jaccard},${jaroWinkler},${levenstein},${diceSorensen},${ratcliffOber},${overlap}"
+      // println(row)
+      row
+    }
+    similarities
   }
 
 
   def getPairs(in: Seq[String]): List[(String, String)] = {
     in.combinations(2).map(x => (x.head, x.tail.head)).toList
+  }
+}
+
+
+//todo: return Seq of Values -> data types supported by spark
+//package object df_utils {
+//  val default: Double = 0.0
+//
+//  implicit class TuplesExtension(val pairs: List[(String, String)]) {
+//
+//    def computeSimilarities: List[String] = {
+//      val header = s"datapointX, datapointY:, jaccard:, jaroWinkler:, levenstein:, diceSorensen:, ratcliffOber:, overlap:"
+//      //println(header)
+//      val similarities: List[String] = for ((x, y) <- pairs) yield {
+//        val jaccard: Double = compareWithJaccard(x, y)
+//        val overlap: Double = compareWithOverlap(x, y)
+//        val jaroWinkler: Double = compareWithJaroWinkler(x, y)
+//        val diceSorensen: Double = compareWithDiceSorensen(x, y)
+//        val levenstein: Int = getLevensteinDistance(x, y)
+//        val ratcliffOber: Double = compareWithRatcliffObershelp(x, y)
+//
+//        val row: String = s"[$x],[$y],${jaccard},${jaroWinkler},${levenstein},${diceSorensen},${ratcliffOber},${overlap}"
+//        // println(row)
+//        row
+//      }
+//      header :: similarities
+//    }
+//
+//    private def compareWithRatcliffObershelp(x: String, y: String): Double = {
+//      RatcliffObershelpMetric.compare(x.toCharArray, y.toCharArray).getOrElse(default)
+//    }
+//
+//    private def getLevensteinDistance(x: String, y: String): Int = {
+//      val notApplicable: Int = Int.MaxValue
+//      StringMetric.compareWithLevenshtein(x.toCharArray, y.toCharArray).getOrElse(notApplicable)
+//    }
+//
+//    private def compareWithDiceSorensen(x: String, y: String): Double = {
+//      StringMetric.compareWithDiceSorensen(1)(x.toCharArray, y.toCharArray).getOrElse(default)
+//    }
+//
+//    private def compareWithJaroWinkler(x: String, y: String): Double = {
+//      StringMetric.compareWithJaroWinkler(x.toCharArray, y.toCharArray).getOrElse(default)
+//    }
+//
+//    private def compareWithOverlap(x: String, y: String): Double = {
+//      val nGram: Int = 3
+//      StringMetric.compareWithOverlap(nGram)(x.toCharArray, y.toCharArray).getOrElse(default)
+//    }
+//
+//    private def compareWithJaccard(x: String, y: String): Double = {
+//      StringMetric.compareWithJaccard(1)(x.toCharArray, y.toCharArray).getOrElse(default)
+//    }
+//
+//
+//  }
+//
+//  implicit class DFExtension(val df: DataFrame) {
+//    def topK(colName: String, k: Int): DataFrame = {
+//      df.
+//        select(colName).
+//        filter(df(colName) !== "").
+//        groupBy(colName).
+//        count().
+//        orderBy(desc("count")).limit(k)
+//    }
+//
+//    def top10(colName: String, k: Int = 10): DataFrame = {
+//      df.
+//        select(colName).
+//        filter(df(colName) !== "").
+//        groupBy(colName).
+//        count().
+//        orderBy(desc("count")).limit(k)
+//    }
+//
+//    def valueCombiByColumn(colName: String): List[(String, String)] = {
+//      val rdd: RDD[Row] = df.select(colName).rdd
+//      val valuesAsStr: List[String] = rdd.map(r => r(0).toString).collect().toList
+//      val pairs: List[(String, String)] = valuesAsStr.combinations(2).map(x => (x.head, x.tail.head)).toList
+//
+//      pairs
+//    }
+//
+//
+//  }
+//
+//
+//}
+
+
+//todo 1: analyse columns from profiled FDs.
+//todo 2: select non-primary key
+//todo 3: for each column and cols combination run simi and correlation profiling
+object BasicStatisticsWithSpark extends App {
+  val config = ConfigFactory.load()
+  val path: String = config.getString("data.msag.path")
+  val author = "author19525FF1.txt"
+  val papers = "papers19525FF1.txt"
+  val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
+
+  val sc = new SparkContext(conf)
+
+  val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+  val authorTuples = sc.textFile(s"$path/$author").map(t => {
+    val Array(paperId, authorId, affilId, originAffil, normalAffil, aSequenceNr) = t.split("\\t")
+    val paperAuthorAffil: PaperAuthorAffil = PaperAuthorAffil(paperId, authorId, affilId, originAffil, normalAffil, aSequenceNr)
+    paperAuthorAffil
+  })
+
+  val papersByAuthor = sc.textFile(s"$path/$papers").map(t => {
+    val Array(paperId, originTitle, normalTitle, publishYear, publishDate, doi, originVenue, normalizedVenue, jornalId, paperRank) = t.split("\\t")
+    val paper = Papers(paperId, originTitle, normalTitle, publishYear.toInt, publishDate, doi, originVenue, normalizedVenue, jornalId, paperRank)
+    paper
+  })
+
+  val authorsDF: DataFrame = sqlContext.createDataFrame(authorTuples)
+  val papersDF: DataFrame = sqlContext.createDataFrame(papersByAuthor)
+
+
+  val paperid: String = "paperId"
+  val authorid: String = "authorId"
+  val affilid: String = "affilId"
+  val originaffil: String = "originAffil"
+  val normalaffil: String = "normalAffil"
+  val publishyear: String = "publishYear"
+
+  val joinedAuthorPaper =
+    authorsDF.
+      join(papersDF, authorsDF(paperid) === papersDF(paperid)).
+      select(authorsDF(paperid), authorsDF(authorid), authorsDF(affilid), authorsDF(originaffil),
+        authorsDF(normalaffil), papersDF(publishyear))
+
+  joinedAuthorPaper.show()
+
+
+  private val selectAffil: DataFrame = joinedAuthorPaper.select(affilid)
+  val countAffiliations: Long = selectAffil.count()
+  println(s"count affils from joint tables $countAffiliations")
+
+  val distinctAffiliation: DataFrame = selectAffil.distinct()
+  val countDistinctAffils: Long = distinctAffiliation.count()
+  println(s"count distinct affils $countDistinctAffils")
+
+  import de.data.dataframe_util._
+
+  val countAffilIDs: DataFrame = joinedAuthorPaper.top10(affilid)
+
+
+  countAffilIDs.show()
+  private val topK: DataFrame = joinedAuthorPaper.topK(affilid, k = 5)
+  topK.show()
+
+  println(topK.queryExecution.simpleString)
+
+  val topKAsList: List[Any] = topK.select(affilid).rdd.map(r => r(0)).collect().toList
+
+  topKAsList foreach (println)
+
+  val affiliations: DataFrame = joinedAuthorPaper.select(normalaffil)
+
+  val combiByColumn: List[String] = affiliations.top10(normalaffil).stringValuesByColumn(normalaffil)
+
+  val similarities: List[String] = combiByColumn.computeSimilaritiesOnColumn
+
+  similarities foreach (println)
+
+
+  /*
+  *
+  *
++--------+-----+
+| affilId|count|
++--------+-----+
+|012E6F4E|   10|
+|02BA878E|    4|
+|04FA6952|    3|
+|06C38422|    2|
+|04AF010A|    2|
+|06F892B4|    2|
+|09C9BF4E|    2|
+|02CC7132|    1|
+|0B5FC046|    1|
+|02CC4D78|    1|
+|164CE32B|    1|
+|0709D66D|    1|
+|17E5897D|    1|
+|0A9B0CA5|    1|
+|017C99DB|    1|
+|15927FB4|    1|
++--------+-----+
+limit 10
+
++--------+-----+
+| affilId|count|
++--------+-----+
+|012E6F4E|   10|
+|02BA878E|    4|
+|04FA6952|    3|
+|04AF010A|    2|
+|06C38422|    2|
+|06F892B4|    2|
+|09C9BF4E|    2|
+|0709D66D|    1|
+|02CC4D78|    1|
+|17E5897D|    1|
++--------+-----+
+
+  *
+  * */
+
+
+  /*authorsDF.show(3)
+
+  authorsDF.printSchema()
+
+  private val distinctVals: DataFrame = authorsDF.select(normalaffil).distinct()
+
+  distinctVals.show()
+
+  private val count: Long = distinctVals.count()
+  println(s"number of distinct values in $count")*/
+
+  // IllegalArgumentException: requirement failed: Covariance calculation for columns with dataType StringType not supported.
+  //  private val corr: Double = authorsDF.select("affilId").stat.corr("affilId", "paperId")
+  //  println(s"correlation $corr")
+
+  //todo: run mllib statistics here:
+  //http://spark.apache.org/docs/latest/mllib-statistics.html
+
+  sc.stop()
+
+}
+
+//todo: schema inference ...
+// should be similar to this:
+// https://github.com/databricks/spark-csv/blob/master/src/main/scala/com/databricks/spark/csv/util/InferSchema.scala
+object SchemaInferer extends App {
+  val config = ConfigFactory.load()
+  val path: String = config.getString("data.msag.path")
+  val author = "author19525FF1.txt"
+  val papers = "papers19525FF1.txt"
+  val conf = new SparkConf().setMaster("local[4]").setAppName("MSAG")
+
+  val sc = new SparkContext(conf)
+
+  val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+  val rows: RDD[Row] = sc.textFile(s"$path/$author").map(t => {
+    val generalSplit: Array[String] = t.split("\\t")
+    val row: Row = DataTuple(generalSplit: _*).createRow()
+    row
+  })
+
+
+  val structType: StructType = DataTuple.createStructType(rows.first())
+  val generalDF: DataFrame = sqlContext.createDataFrame(rows, structType)
+
+  generalDF.show(10)
+
+  generalDF.printSchema()
+
+
+  /* val papersByAuthor = sc.textFile(s"$path/$papers").map(t => {
+     val Array(paperId, originTitle, normalTitle, publishYear, publishDate, doi, originVenue, normalizedVenue, jornalId, paperRank) = t.split("\\t")
+     val paper = Papers(paperId, originTitle, normalTitle, publishYear.toInt, publishDate, doi, originVenue, normalizedVenue, jornalId, paperRank)
+     paper
+   })
+
+
+   val papersDF: DataFrame = sqlContext.createDataFrame(papersByAuthor)*/
+}
+
+case class DataTuple(attr: String*) {
+  def createRow(): Row = {
+    Row.fromSeq(attr)
+  }
+
+
+}
+
+object DataTuple {
+  def createStructType(attributes: Row): StructType = {
+
+    var count = 0
+
+    val structType: StructType = attributes.toSeq.foldLeft(StructType(Nil))(
+      (accamulator, element) => {
+        accamulator.add({
+          count += 1;
+          s"column$count"
+        }, DataTypes.StringType, true)
+      }
+    )
+    structType
   }
 }
 
