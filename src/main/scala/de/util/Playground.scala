@@ -306,9 +306,9 @@ object ApproximateMatchTester extends App {
   //  private val compare: Option[Double] = JaroMetric.compare("dwayne", "duane")
   //  println(compare.get)
 
-  val combinations: List[(String, String)] = getPairs(MsagData.normNames1)
+  val combinations: List[(String, String)] = List(("ctony", "ctoni")) // getPairs(MsagData.normNames1)
 
-  computeSimilarities(combinations)
+  computeSimilarities(combinations).foreach(println)
 
   def computeSimilarities(pairs: List[(String, String)]): List[String] = {
     val default: Double = 0.0

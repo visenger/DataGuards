@@ -12,8 +12,8 @@ import scala.io.Source
 import scala.util.Random
 
 /**
- * Introduces noise to HOSP data set and writes results to the specified folder.
- */
+  * Introduces noise to HOSP data set and writes results to the specified folder.
+  */
 
 
 class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val writeTo: String) {
@@ -29,14 +29,17 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val sparkConf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("HOSP")
     val sc: SparkContext = new SparkContext(sparkConf)
 
-    //val header: String = sc.textFile(datapath).first()
+    val header: String = sc.textFile(datapath).first()
 
-    val filteredHeader: RDD[String] = sc.textFile(path)
-    //    val filteredHeader: RDD[String] = sc.parallelize(sc.textFile(datapath).filter(!_.equals(header)).take(200))
-    val tupled: RDD[HospTuple] = filteredHeader.map(line => {
-      val Array(providerID, hospitalName, address, city, state, zipCode, countyName, phoneNumber, condition, measureID, measureName, score, sample, footnote, measureStartDate, measureEndDate) = line.split( s"""","""")
-      HospTuple(providerID.toString.replace('"', ' ').trim, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
-    })
+    //val filteredHeader: RDD[String] = sc.textFile(path)
+    val filteredHeader: RDD[String] = sc.parallelize(sc.textFile(datapath).filter(!_.equals(header)).take(200))
+    //todo: ajust header -> different count of attributes
+    val tupled: RDD[HospTuple] = filteredHeader.map(
+      line => {
+        val Array(providerID, hospitalName, address, city, state, zipCode, countyName, phoneNumber, condition, measureID, measureName, score, sample, footnote, measureStartDate, measureEndDate)
+        = line.split(',')
+        HospTuple(providerID.toString.replace('"', ' ').trim, hospitalName.toString, address.toString, city.toString, state.toString, zipCode.toString, countyName.toString, phoneNumber.toString, condition.toString, measureID.toString, measureName.toString, score.toString, sample.toString, footnote.toString, measureStartDate.toString, measureEndDate.toString)
+      })
 
 
     val tuplesWithId: RDD[(Long, HospTuple)] = tupled.zipWithUniqueId().map(_.swap)
@@ -78,7 +81,8 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     val dir: File = new File(datapath)
 
 
-    for {file <- dir.listFiles() if file.getName.startsWith("hosp")} {
+    val listFiles: Array[File] = dir.listFiles()
+    for {file <- listFiles if file.getName.startsWith("hosp")} {
       val input: Map[Long, HospTuple] = readData(file.getAbsolutePath)
       val noiseElements: List[(Long, Int)] = calculateNoiseElements(input.size)
       val output: Map[Long, HospTuple] = insertNoise(input, noiseElements)
@@ -116,22 +120,22 @@ class HospNoiseInjector(val datapath: String, val noisePercentage: Int = 2, val 
     output.toList
   }
 
-//  def predicatesZipTSV: List[String] = {
-//    val zipFile = s"${config.getString("data.zip.path")}/zipcode.csv"
-//    val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
-//
-//    val zipPredicates = zipLines map (l => {
-//      val line = l._1
-//      val idx = l._2
-//      val Array(zip, state) = line.split(",")
-//      val predicates =
-//        s"""zipZ(\"$idx\", \"$zip\")
-//            |stateZ(\"$idx\", \"$state\")
-//       """.stripMargin
-//      predicates
-//    })
-//    zipPredicates.toList
-//  }
+  //  def predicatesZipTSV: List[String] = {
+  //    val zipFile = s"${config.getString("data.zip.path")}/zipcode.csv"
+  //    val zipLines = Source.fromFile(zipFile).getLines().zipWithIndex.drop(1)
+  //
+  //    val zipPredicates = zipLines map (l => {
+  //      val line = l._1
+  //      val idx = l._2
+  //      val Array(zip, state) = line.split(",")
+  //      val predicates =
+  //        s"""zipZ(\"$idx\", \"$zip\")
+  //            |stateZ(\"$idx\", \"$state\")
+  //       """.stripMargin
+  //      predicates
+  //    })
+  //    zipPredicates.toList
+  //  }
 
   private def insertNoiseInto(tuple: HospTuple, idx: List[(Long, Int)]): HospTuple = {
     val attrs: List[Int] = idx.map(_._2)
@@ -276,17 +280,17 @@ case class HospTuple(providerID: String,
     import Util._
     s"""
        |providerNumberH("$idx", "${normalizeGroundAtom(this.providerID)}")
-                                                                          |hospitalNameH("$idx", "${normalizeGroundAtom(this.hospitalName)}")
-                                                                                                                                             |addressH("$idx", "${normalizeGroundAtom(this.address)}")
-                                                                                                                                                                                                      |cityH("$idx", "${normalizeGroundAtom(this.city)}")
-                                                                                                                                                                                                                                                         |stateH("$idx", "${normalizeGroundAtom(this.state)}")
-                                                                                                                                                                                                                                                                                                              |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
-                                                                                                                                                                                                                                                                                                                                                                       |countryNameH("$idx", "${normalizeGroundAtom(this.countyName)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                       |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |scoreH("$idx", "${normalizeGroundAtom(this.score)}")
+       |hospitalNameH("$idx", "${normalizeGroundAtom(this.hospitalName)}")
+       |addressH("$idx", "${normalizeGroundAtom(this.address)}")
+       |cityH("$idx", "${normalizeGroundAtom(this.city)}")
+       |stateH("$idx", "${normalizeGroundAtom(this.state)}")
+       |zipCodeH("$idx", "${normalizeGroundAtom(this.zipCode)}")
+       |countryNameH("$idx", "${normalizeGroundAtom(this.countyName)}")
+       |phoneNumberH("$idx", "${normalizeGroundAtom(this.phoneNumber)}")
+       |conditionH("$idx", "${normalizeGroundAtom(this.condition)}")
+       |measureCodeH("$idx", "${normalizeGroundAtom(this.measureID)}")
+       |measureNameH("$idx", "${normalizeGroundAtom(this.measureName)}")
+       |scoreH("$idx", "${normalizeGroundAtom(this.score)}")
      """.stripMargin
   }
 }

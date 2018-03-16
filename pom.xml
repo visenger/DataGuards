@@ -10,7 +10,7 @@
 
 
     <properties>
-        <java.verion>1.7</java.verion>
+        <java.verion>1.8</java.verion>
         <junit.version>4.11</junit.version>
         <guava.version>18.0</guava.version>
         <scala.version>2.11.8</scala.version>
@@ -104,29 +104,29 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>build-helper-maven-plugin</artifactId>
-                    <version>1.7</version>
+                    <version>1.12</version>
                 </plugin>
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
-                    <version>3.1.5</version>
+                    <version>3.2.2</version>
                     <configuration>
                         <recompileMode>incremental</recompileMode>
                         <args>
-                            <arg>-target:jvm-1.7</arg>
+                            <arg>-target:jvm-1.8</arg>
                         </args>
                         <javacArgs>
                             <javacArg>-source</javacArg>
-                            <javacArg>1.7</javacArg>
+                            <javacArg>1.8</javacArg>
                             <javacArg>-target</javacArg>
-                            <javacArg>1.7</javacArg>
+                            <javacArg>1.8</javacArg>
                         </javacArgs>
                     </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>2.0.2</version>
+                    <version>3.5.1</version>
                 </plugin>
 
 
@@ -181,6 +181,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <executions>

@@ -103,5 +103,10 @@ object PlaygroundForNoise extends App {
 
 object Test extends App{
 
+  val testStr="10018,CALLAHAN EYE FOUNDATION HOSPITAL,1720 UNIVERSITY BLVD,,,BIRMINGHAM,AL,35233,JEFFERSON,2053258100,Acute Care Hospitals,Voluntary non-profit - Private,Yes,Surgical Infection Prevention,SCIP-INF-4,all heart surgery patients whose blood sugar (blood glucose) is kept under good control in the days right after surgery,,,AL_SCIP-INF-4"
+
+  private val split: Array[String] = testStr.split(',')
+
+
 }
 
