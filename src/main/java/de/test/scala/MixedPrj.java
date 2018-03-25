@@ -8,6 +8,6 @@ import de.data.preparation.NoiseInjector;
 public class MixedPrj {
 
     public static void main(String[] args) {
-        new NoiseInjector().hosp("test/path/to/data/").noisePercentage(3).inject();
+        new NoiseInjector().hosp("/Users/visenger/data/HOSP2/input/tmp").noisePercentage(3).inject();
     }
 }
