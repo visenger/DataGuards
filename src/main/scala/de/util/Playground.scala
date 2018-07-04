@@ -1,17 +1,13 @@
 package de.util
 
-import com.google.common.base.Strings
 import com.rockymadden.stringmetric.StringMetric
-import com.rockymadden.stringmetric.similarity.{RatcliffObershelpMetric, JaroMetric}
+import com.rockymadden.stringmetric.similarity.RatcliffObershelpMetric
 import com.typesafe.config.{Config, ConfigFactory}
-import de.data.preparation.{Papers, PaperAuthorAffil, Hosp2Tuple, HospTuple}
-import org.apache.spark.mllib.linalg.{Vectors, SparseVector}
+import de.data.preparation.{Hosp2Tuple, HospTuple, PaperAuthorAffil, Papers}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{DataTypes, DataType, StructField, StructType}
-import org.apache.spark.sql.{Row, GroupedData, DataFrame}
-import org.apache.spark.{SparkContext, SparkConf}
-import org.apache.spark.sql.functions._
-
+import org.apache.spark.sql.types.{DataTypes, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.util.Random
 
@@ -77,7 +73,7 @@ object Playground {
     * */
 
     println("config.getString " + config.getString("data.tpch.orders"))
-    val jointCustOrder: RDD[JointCustOrder] = jointTables.map(m =>
+    val jointCustOrder = jointTables.map(m =>
       JointCustOrder(s"${m(0)}", s"${m(1)}", s"${m(2)}", s"${m(3)}", s"${m(4)}", s"${m(5)}", s"${m(6)}", s"${m(7)}", s"${m(8)}", s"${m(9)}", s"${m(10)}", s"${m(11)}", s"${m(12)}"))
 
 

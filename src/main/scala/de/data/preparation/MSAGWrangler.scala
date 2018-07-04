@@ -6,8 +6,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.{SparkConf, SparkContext}
 
-import scala.io.Source
-
 /**
   * Created by visenger on 28/08/15.
   */
@@ -31,11 +29,12 @@ object MSAGWrangler {
     conf.set("spark.storage.memoryFraction", "0.9")
     val sc = new SparkContext(conf)
 
-    val authorTuples = sc.textFile(s"$path/$author").map(t => {
+    val value: RDD[PaperAuthorAffil] = sc.textFile(s"$path/$author").map(t => {
       val Array(paperId, authorId, affilId, originAffil, normalAffil, aSequenceNr) = t.split("\\t")
       val paperAuthorAffil: PaperAuthorAffil = PaperAuthorAffil(paperId, authorId, affilId, originAffil, normalAffil, aSequenceNr)
       paperAuthorAffil
     })
+    val authorTuples = value
 
     val papersByAuthor = sc.textFile(s"$path/$papers").map(t => {
       val Array(paperId, originTitle, normalTitle, publishYear, publishDate, doi, originVenue, normalizedVenue, jornalId, paperRank) = t.split("\\t")
@@ -52,9 +51,9 @@ object MSAGWrangler {
 
     val query = sqlContext.sql(
       s"""SELECT a.paperId, a.authorId, a.affilId, a.originAffil, a.normalAffil, a.aSequenceNr, p.publishYear, p.publishDate
-          |FROM authors a
-          |JOIN papers p ON a.paperId=p.paperId
-          |WHERE a.affilId IS NOT NULL AND a.affilId <> ''
+         |FROM authors a
+         |JOIN papers p ON a.paperId=p.paperId
+         |WHERE a.affilId IS NOT NULL AND a.affilId <> ''
        """.stripMargin)
 
 
@@ -74,7 +73,7 @@ object MSAGWrangler {
     //    val filteredNotNull: RDD[Row] =
     //      query.map(r => Row(r(0), r(1), r(2), r(3), r(4), r(5), r(6), r(7))).filter(r => r.getString(2) != "")
 
-    val groupedByAuthor/*: RDD[(Any, Iterable[Row])]*/ = query.collect().groupBy(r => r(1))
+    val groupedByAuthor /*: RDD[(Any, Iterable[Row])]*/ = query.collect().groupBy(r => r(1))
 
     val authorsWithManyPubs = groupedByAuthor.filter(g => {
       // who wrote more than 10 publications at the same organisation/affiliation
@@ -86,13 +85,15 @@ object MSAGWrangler {
     //todo: use this sample when running on cluster;
     //val sampleAuthors: RDD[(Any, Iterable[Row])] = authorsWithManyPubs.sample(false, 0.05, System.currentTimeMillis())
 
-    val noisyData/*: RDD[LogNoisyData]*/ = authorsWithManyPubs.map(a => {
+    val noisyData /*: RDD[LogNoisyData]*/ = authorsWithManyPubs.map(a => {
       //todo: Achtung! to many thing happening here -> smells
       val authorId: String = a._1.asInstanceOf[String]
-      val papersByAuthor: List[Row] = a._2.toList /* clean data */
+      val papersByAuthor: List[Row] = a._2.toList
+      /* clean data */
       val groupedByAffilId: Map[Any, List[Row]] = papersByAuthor.groupBy(r => r(2)) /* r(2) is the AffiliationID column*/
 
-      val manyPubs: Map[Any, List[Row]] = groupedByAffilId.filter(p => p._2.size >= 3) /* if where more than 3 affiliations in portfolio*/
+      val manyPubs: Map[Any, List[Row]] = groupedByAffilId.filter(p => p._2.size >= 3)
+      /* if where more than 3 affiliations in portfolio*/
       val goldStandard: List[(Row, List[Row])] = manyPubs.map(p => (p._2.head, p._2.tail)).toList
       val rowsToBeRemoved: List[Row] = goldStandard.map(g => g._1)
       //manyPubs.map(p => p._2.toList.head).toList /* let's remember the first and then use it for the data cleaning*/
@@ -120,7 +121,7 @@ object MSAGWrangler {
     // val pathForData = "/home/larysa/rockit/ms-academic-graph/MicrosoftAcademicGraph/data-sample"
     val pathForData = path
 
-    val withIndex/*: RDD[(LogNoisyData, Long)]*/ = noisyData.zipWithIndex
+    val withIndex /*: RDD[(LogNoisyData, Long)]*/ = noisyData.zipWithIndex
 
     //    val count: Long = withIndex.count()
     //    println("count = " + count)
@@ -148,7 +149,8 @@ object MSAGWrangler {
       val noisyRows: List[String] = dataWithMissingValues.map(_.getCSVRow) /* write to disc: */
       Util.writeToFile(noisyRows, s"$pathForData/$idx/$id/noisy-$id.csv")
 
-      val predicatesForMissingVals: List[String] = dataWithMissingValues.map(_.getPredicates) /* write to disc: */
+      val predicatesForMissingVals: List[String] = dataWithMissingValues.map(_.getPredicates)
+      /* write to disc: */
       val inRangePredicates: List[String] = d.createInRangePredicates /* write to disc: */
       Util.writeToFile(predicatesForMissingVals ::: inRangePredicates, s"$pathForData/$idx/$id/predicates-$id.db")
 
@@ -309,17 +311,17 @@ object MSAGWrangler {
 case class PaperAuthorAffil(paperId: String, authorId: String, affilId: String, originAffil: String, normalAffil: String, aSequenceNr: String) {
   def getPredicates: String = {
     s"""author("$paperId", "$authorId")
-        |affiliation("$paperId", "$affilId")
-        |authorSeqNumber("$authorId", "$aSequenceNr")""".stripMargin
+       |affiliation("$paperId", "$affilId")
+       |authorSeqNumber("$authorId", "$aSequenceNr")""".stripMargin
   }
 }
 
 case class PaperAuthorAffilPubYear(paperId: String, authorId: String, affilId: String, originAffil: String, normalAffil: String, aSequenceNr: String, publishYear: Int, publishDate: String) {
   def getPredicates: String = {
     s"""author("$paperId", "$authorId")
-        |affiliation("$paperId", "$affilId")
-        |authorSeqNumber("$authorId", "$aSequenceNr")
-        |publishYear("$paperId", "$publishYear")""".stripMargin
+       |affiliation("$paperId", "$affilId")
+       |authorSeqNumber("$authorId", "$aSequenceNr")
+       |publishYear("$paperId", "$publishYear")""".stripMargin
   }
 }
 
@@ -338,11 +340,11 @@ case class PaperAuthorAffilRow(paperId: String, authorId: String, affilId: Strin
     val affiliationPredicate: String = if (affilId == "") ""
     else
       s"""\naffiliation("$paperId", "${normalizeGroundAtom(affilId)}")
-          |authorSeqNumber("$authorId", "$aSequenceNr")
-          |originAffiliationName("$affilId","${normalizeGroundAtom(originAffil)}")
-          |normalAffiliationName("$affilId","${normalizeGroundAtom(normalAffil)}")""".stripMargin
+         |authorSeqNumber("$authorId", "$aSequenceNr")
+         |originAffiliationName("$affilId","${normalizeGroundAtom(originAffil)}")
+         |normalAffiliationName("$affilId","${normalizeGroundAtom(normalAffil)}")""".stripMargin
     s"""author("$paperId", "$authorId")$affiliationPredicate
-        |publishYear("$paperId", "$publishYear")""".stripMargin
+       |publishYear("$paperId", "$publishYear")""".stripMargin
   }
 
   def getCSVRow: String = {
@@ -409,8 +411,8 @@ case class LogNoisyData(authorId: String,
       val references: List[PaperAuthorAffilRow] = g._2
       val referencePredicates: List[String] = references.map(ref => {
         s"""sameAffiliation("$paperid", "${ref.paperId}")
-            |sameOriginNames("$originName", "${Util.normalizeGroundAtom(ref.originAffil)}")
-            |sameNormalNames("$normalName", "${Util.normalizeGroundAtom(ref.normalAffil)}")""".stripMargin
+           |sameOriginNames("$originName", "${Util.normalizeGroundAtom(ref.originAffil)}")
+           |sameNormalNames("$normalName", "${Util.normalizeGroundAtom(ref.normalAffil)}")""".stripMargin
       })
       EvaluatorForPredicates(List(removedRow), List(re11, re12, re21, re22, re31, re32), referencePredicates)
 
